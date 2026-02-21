@@ -34,15 +34,23 @@ function App() {
                                 </div>
                             </ProtectedRoute>
                         }
+
+                    />
+                    <Route
+                        path="/dashboard"
+                        element={
+                            <ProtectedRoute>
+                                <Layout>
+                                    <h2>Welcome back, {getUserInfo()?.name || 'User'}!</h2>
+                                    <p className="text-muted">Here is what is happening with your courses today.</p>
+                                    {/* Your Course Cards will go here */}
+                                </Layout>
+                            </ProtectedRoute>
+                        }
                     />
                 </Routes>
             </Router>
         </QueryClientProvider>
     );
 }
-
-
-// Inside your <Routes> block in App.jsx:
-
-
 export default App;
