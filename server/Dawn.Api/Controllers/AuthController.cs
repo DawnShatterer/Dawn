@@ -1,10 +1,11 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens; 
-using System.IdentityModel.Tokens.Jwt; 
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Dawn.Core.Entities;
+
 namespace Dawn.Api.Controllers;
 
 [Route("api/[controller]")]
@@ -42,13 +43,17 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginModel model)
     {
         var user = await _userManager.FindByEmailAsync(model.Email);
+
         if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
         {
             var authClaims = new List<Claim>
             {
+            
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
                 new Claim(ClaimTypes.Name, user.Email!),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim("role", user.Role)
+                // Standardizing the role claim
+                new Claim(ClaimTypes.Role, user.Role)
             };
 
             var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
@@ -64,10 +69,12 @@ public class AuthController : ControllerBase
             return Ok(new
             {
                 token = new JwtSecurityTokenHandler().WriteToken(token),
-                expiration = token.ValidTo
+                expiration = token.ValidTo,
+                user = new { user.Email, user.FullName, user.Role }
             });
         }
-        return Unauthorized();
+
+        return Unauthorized(new { Message = "Invalid email or password" });
     }
 }
 

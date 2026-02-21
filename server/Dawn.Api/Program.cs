@@ -4,16 +4,44 @@ using Dawn.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Dawn.Core.Interfaces;
+using Dawn.Infrastructure.Repositories;
 using Microsoft.IdentityModel.Tokens;
+using Dawn.Infrastructure.Mapping; // Added this
 
 var builder = WebApplication.CreateBuilder(args);
 
 // --- 1. SERVICES CONFIGURATION ---
 
-// Add Controllers (instead of minimal APIs for easier management)
+// FIXED: Only ONE AutoMapper call. Using the explicit Profile type is safer.
+builder.Services.AddAutoMapper(typeof(MappingProfiles));
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(); // Using Swagger for testing instead of default OpenAPI
+
+// Swagger Configuration with JWT Support
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\""
+    });
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference { Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme, Id = "Bearer" }
+            },
+            new string[] {}
+        }
+    });
+});
 
 // Database Connection
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -29,9 +57,13 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
+// Register Generic Repository
+builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+
 // JWT Authentication Setup
 var jwtSettings = builder.Configuration.GetSection("Jwt");
-var key = Encoding.ASCII.GetBytes(jwtSettings["Key"] ?? "A_Very_Long_And_Secret_Key_For_Dawn_Project_2026");
+var keyString = jwtSettings["Key"] ?? "A_Very_Long_And_Secret_Key_For_Dawn_Project_2026_Secure";
+var key = Encoding.ASCII.GetBytes(keyString);
 
 builder.Services.AddAuthentication(options => {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -46,8 +78,8 @@ builder.Services.AddAuthentication(options => {
         IssuerSigningKey = new SymmetricSecurityKey(key),
         ValidateIssuer = true,
         ValidateAudience = true,
-        ValidIssuer = jwtSettings["Issuer"],
-        ValidAudience = jwtSettings["Audience"],
+        ValidIssuer = jwtSettings["Issuer"] ?? "DawnApi",
+        ValidAudience = jwtSettings["Audience"] ?? "DawnUsers",
         ClockSkew = TimeSpan.Zero
     };
 });
@@ -64,13 +96,13 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Use CORS (Crucial for React to talk to ASP.NET)
+// Use CORS
 app.UseCors(x => x
     .AllowAnyOrigin()
     .AllowAnyMethod()
     .AllowAnyHeader());
 
-app.UseAuthentication(); // Must come before Authorization
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
