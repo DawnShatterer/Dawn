@@ -1,0 +1,40 @@
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: dawn_db
+    environment:
+      ACCEPT_EULA: 'Y'
+      MSSQL_SA_PASSWORD: 'YourStrong!Passw0rd123'
+      MSSQL_PID: 'Developer'
+    ports:
+      - "1434:1433" # Maps container 1433 to host 1434 to avoid conflict with local SQLEXPRESS
+    volumes:
+      - dawn-mssql-data:/var/opt/mssql
+
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: dawn_backend
+    ports:
+      - "5159:8080" # Maps local 5159 to container's 8080
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      # Connects to the 'db' container instead of the host's SQL Express
+      - ConnectionStrings__DefaultConnection=Server=db,1433;Database=DawnDb;User Id=sa;Password=YourStrong!Passw0rd123;TrustServerCertificate=True;
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: dawn_frontend
+    ports:
+      - "5174:80" # Maps local 5174 to Nginx 80
+    depends_on:
+      - backend
+
+volumes:
+  dawn-mssql-data:
