@@ -10,7 +10,12 @@ export const getUserInfo = () => {
             id: decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"],
             email: decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"],
             role: decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"],
-            name: decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"]
+            name: decoded.FullName || decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] || decoded.email,
+            nickName: decoded.NickName || '',
+            phone: decoded.Phone || '',
+            location: decoded.Location || '',
+            grade: decoded.Grade || '',
+            profilePictureUrl: decoded.ProfilePictureUrl || (localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user'))?.profilePictureUrl : '') || ''
         };
     } catch (error) {
         return null;
