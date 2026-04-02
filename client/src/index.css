@@ -1,68 +1,39 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
+/* Global reset - rely on Bootstrap min.css for most things */
+html, body, #root {
   min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  width: 100%;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* Base fonts are handled by Bootstrap. */
+
+/* Global link and hover utilities */
+a {
+  text-decoration: none;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+.hover-bg-tertiary:hover {
+  background-color: var(--bs-secondary-bg) !important;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+.transition-all {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Standard Bootstrap 5 theme support natively handles [data-bs-theme="dark"] 
+   Ensure we are using bg-body, bg-body-tertiary, text-body in React JSX files
+   instead of hardcoding text-dark or bg-white!
+*/
+
+[data-bs-theme="dark"] .border-bottom,
+[data-bs-theme="dark"] .border-top,
+[data-bs-theme="dark"] .border-start,
+[data-bs-theme="dark"] .border-end {
+    border-color: var(--bs-border-color) !important;
+}
+
+/* Ensure secondary colors don't wash out in dark mode */
+[data-bs-theme="dark"] .text-muted {
+    color: #adb5bd !important;
 }
