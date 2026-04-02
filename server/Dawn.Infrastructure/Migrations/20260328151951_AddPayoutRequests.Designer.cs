@@ -4,6 +4,7 @@ using Dawn.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Dawn.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260328151951_AddPayoutRequests")]
+    partial class AddPayoutRequests
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -113,9 +116,6 @@ namespace Dawn.Infrastructure.Migrations
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("datetimeoffset");
 
-                    b.Property<int>("LoginCount")
-                        .HasColumnType("int");
-
                     b.Property<string>("NickName")
                         .HasColumnType("nvarchar(max)");
 
@@ -156,9 +156,6 @@ namespace Dawn.Infrastructure.Migrations
 
                     b.Property<bool>("PrefSessions")
                         .HasColumnType("bit");
-
-                    b.Property<string>("ProfilePictureUrl")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Role")
                         .IsRequired()
@@ -286,9 +283,6 @@ namespace Dawn.Infrastructure.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("ThumbnailUrl")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -355,40 +349,6 @@ namespace Dawn.Infrastructure.Migrations
                     b.HasIndex("UsedOnCourseId");
 
                     b.ToTable("CourseCoupons", (string)null);
-                });
-
-            modelBuilder.Entity("Dawn.Core.Entities.CourseReview", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Comment")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<int>("CourseId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Score")
-                        .HasColumnType("int");
-
-                    b.Property<string>("StudentId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CourseId");
-
-                    b.HasIndex("StudentId");
-
-                    b.ToTable("CourseReviews");
                 });
 
             modelBuilder.Entity("Dawn.Core.Entities.DiscussionReply", b =>
@@ -1217,25 +1177,6 @@ namespace Dawn.Infrastructure.Migrations
                     b.Navigation("UsedOnCourse");
                 });
 
-            modelBuilder.Entity("Dawn.Core.Entities.CourseReview", b =>
-                {
-                    b.HasOne("Dawn.Core.Entities.Course", "Course")
-                        .WithMany("Reviews")
-                        .HasForeignKey("CourseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Dawn.Core.Entities.ApplicationUser", "Student")
-                        .WithMany()
-                        .HasForeignKey("StudentId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Course");
-
-                    b.Navigation("Student");
-                });
-
             modelBuilder.Entity("Dawn.Core.Entities.DiscussionReply", b =>
                 {
                     b.HasOne("Dawn.Core.Entities.ApplicationUser", "Author")
@@ -1513,8 +1454,6 @@ namespace Dawn.Infrastructure.Migrations
                     b.Navigation("LiveClasses");
 
                     b.Navigation("Quizzes");
-
-                    b.Navigation("Reviews");
                 });
 
             modelBuilder.Entity("Dawn.Core.Entities.DiscussionThread", b =>
