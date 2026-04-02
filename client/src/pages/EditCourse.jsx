@@ -1,23 +1,44 @@
-import React, { useState, useRef } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import { createCourse } from '../api/courseService';
+import React, { useState, useEffect, useRef } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useParams } from 'react-router-dom';
+import { getCourseById, updateCourse } from '../api/courseService';
 import { Form, Button, Card, Container, Spinner, Alert, Row, Col } from 'react-bootstrap';
-import { PlusCircle, ArrowLeft, Image as ImageIcon } from 'lucide-react';
+import { Edit3, ArrowLeft, Image as ImageIcon } from 'lucide-react';
 
-const CreateCourse = () => {
-    const [formData, setFormData] = useState({ title: '', description: '', price: '' });
+const EditCourse = () => {
+    const { id } = useParams();
+    const [formData, setFormData] = useState({ title: '', description: '', price: 0 });
     const [thumbnailFile, setThumbnailFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
     const fileInputRef = useRef(null);
     const navigate = useNavigate();
     const queryClient = useQueryClient();
 
+    const { data: course, isLoading } = useQuery({
+        queryKey: ['course', id],
+        queryFn: () => getCourseById(id)
+    });
+
+    useEffect(() => {
+        if (course) {
+            setFormData({
+                title: course.title || '',
+                description: course.description || '',
+                price: course.price || 0
+            });
+            if (course.thumbnailUrl) {
+                setPreviewUrl(course.thumbnailUrl.startsWith('http') ? course.thumbnailUrl : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '')}${course.thumbnailUrl}`);
+            }
+        }
+    }, [course]);
+
     const mutation = useMutation({
-        mutationFn: createCourse,
+        mutationFn: (payload) => updateCourse(id, payload),
         onSuccess: () => {
             queryClient.invalidateQueries(['courses']);
-            navigate('/dashboard');
+            queryClient.invalidateQueries(['course', id]);
+            queryClient.invalidateQueries(['analytics']);
+            navigate('/analytics');
         },
     });
 
@@ -44,26 +65,35 @@ const CreateCourse = () => {
         mutation.mutate(data);
     };
 
+    if (isLoading) {
+        return (
+            <Container className="py-5 text-center">
+                <Spinner animation="border" variant="primary" />
+                <p className="mt-3 text-muted">Loading Course Data...</p>
+            </Container>
+        );
+    }
+
     return (
         <Container className="py-4" style={{ maxWidth: '900px' }}>
-            <Button variant="link" className="text-decoration-none text-muted mb-3 p-0" onClick={() => navigate('/dashboard')}>
+            <Button variant="link" className="text-decoration-none text-muted mb-3 p-0" onClick={() => navigate('/analytics')}>
                 <ArrowLeft size={16} className="me-1" /> Back to Dashboard
             </Button>
             
             <Card className="border-0 shadow-sm p-4">
                 <div className="d-flex align-items-center mb-4 pb-3 border-bottom">
                     <div className="bg-primary bg-opacity-10 p-2 rounded me-3 text-primary">
-                        <PlusCircle size={24} />
+                        <Edit3 size={24} />
                     </div>
                     <div>
-                        <h3 className="mb-0 fw-bold">Create New Course</h3>
-                        <p className="text-muted small mb-0">Set up your new course syllabus and marketing details.</p>
+                        <h3 className="mb-0 fw-bold">Edit Course Settings</h3>
+                        <p className="text-muted small mb-0">Update your syllabus and marketing details.</p>
                     </div>
                 </div>
 
                 {mutation.isError && (
                     <Alert variant="danger" className="border-0 shadow-sm">
-                        <strong>Error:</strong> {mutation.error?.response?.data?.message || mutation.error?.response?.data || 'Failed to save course. Check your connection.'}
+                        <strong>Error:</strong> {mutation.error?.response?.data?.message || mutation.error?.response?.data || 'Failed to sync modifications.'}
                     </Alert>
                 )}
 
@@ -74,7 +104,6 @@ const CreateCourse = () => {
                                 <Form.Label className="fw-semibold">Course Title</Form.Label>
                                 <Form.Control
                                     type="text"
-                                    placeholder="e.g. Fullstack Development with .NET & React"
                                     value={formData.title}
                                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                                     required
@@ -86,7 +115,6 @@ const CreateCourse = () => {
                                 <Form.Control
                                     as="textarea"
                                     rows={6}
-                                    placeholder="Provide a detailed overview of the course content..."
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                     required
@@ -99,15 +127,11 @@ const CreateCourse = () => {
                                     type="number"
                                     step="0.01"
                                     min="0"
-                                    placeholder="0.00"
                                     value={formData.price}
                                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                                     required
                                     style={{ maxWidth: '200px' }}
                                 />
-                                <Form.Text className="text-muted">
-                                    Set to 0 if the course is free.
-                                </Form.Text>
                             </Form.Group>
                         </Col>
                         
@@ -124,7 +148,7 @@ const CreateCourse = () => {
                                     ) : (
                                         <>
                                             <ImageIcon size={40} className="text-secondary mb-2" />
-                                            <small className="text-muted fw-bold text-center px-3">Click to upload a cover image</small>
+                                            <small className="text-muted fw-bold text-center px-3">Click to upload a new cover image</small>
                                         </>
                                     )}
                                 </div>
@@ -145,7 +169,7 @@ const CreateCourse = () => {
                     <div className="d-flex justify-content-end gap-2 pt-3 border-top">
                         <Button
                             variant="light"
-                            onClick={() => navigate('/dashboard')}
+                            onClick={() => navigate('/analytics')}
                             disabled={mutation.isPending}
                         >
                             Cancel
@@ -157,8 +181,8 @@ const CreateCourse = () => {
                             disabled={mutation.isPending}
                         >
                             {mutation.isPending ? (
-                                <><Spinner size="sm" className="me-2" /> Publishing...</>
-                            ) : 'Publish Course'}
+                                <><Spinner size="sm" className="me-2" /> Synching...</>
+                            ) : 'Save Updates'}
                         </Button>
                     </div>
                 </Form>
@@ -167,4 +191,4 @@ const CreateCourse = () => {
     );
 };
 
-export default CreateCourse;
+export default EditCourse;
