@@ -1,20 +1,21 @@
-namespace Dawn.Core.DTOs;
+namespace Dawn.Api.DTOs;
 
-public class CourseDto
+public class CourseUpdateDto
 {
-    public int Id { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public decimal Price { get; set; }
-    public string InstructorId { get; set; } = string.Empty;
-    public string? ThumbnailUrl { get; set; }
-    public decimal AverageRating { get; set; }
-    public int TotalReviews { get; set; }
+    
+    // Optional replacement for Thumbnail
+    public IFormFile? ThumbnailFile { get; set; }
 }
 
-public class CourseCreateDto
+public class CourseCreateRequestDto
 {
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public decimal Price { get; set; }
+    
+    // Optional Thumbnail
+    public IFormFile? ThumbnailFile { get; set; }
 }
