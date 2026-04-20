@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card, Button, Form, Spinner, Row, Col, Badge } from 'react-bootstrap';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { BellRing, Plus, Send } from 'lucide-react';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 import { getCourseAnnouncements, createAnnouncement } from '../api/announcementService';
 
 const CourseAnnouncements = ({ courseId, isOwner, userRole }) => {
@@ -54,7 +54,7 @@ const CourseAnnouncements = ({ courseId, isOwner, userRole }) => {
                         style={{ backgroundColor: '#6f42c1', borderColor: '#6f42c1' }} 
                         onClick={() => setShowForm(!showForm)}
                     >
-                        <Plus size={16} className="me-1" /> {showForm ? 'Cancel' : 'Post Update'}
+                        <i className="bi bi-plus me-1" style={{ fontSize: '16px' }}></i> {showForm ? 'Cancel' : 'Post Update'}
                     </Button>
                 )}
             </div>
@@ -93,7 +93,7 @@ const CourseAnnouncements = ({ courseId, isOwner, userRole }) => {
                                     style={{ backgroundColor: '#6f42c1', borderColor: '#6f42c1' }}
                                     className="px-4 fw-bold"
                                 >
-                                    {createMutation.isPending ? 'Posting...' : <><Send size={16} className="me-2"/> Publish & Notify</>}
+                                    {createMutation.isPending ? 'Posting...' : <><i className="bi bi-send me-2" style={{ fontSize: '16px' }}></i> Publish & Notify</>}
                                 </Button>
                             </div>
                         </Form>
@@ -105,7 +105,7 @@ const CourseAnnouncements = ({ courseId, isOwner, userRole }) => {
             
             {!isLoading && announcements?.length === 0 && (
                 <div className="text-center py-5 text-muted">
-                    <BellRing size={48} className="mb-3 opacity-25" />
+                    <i className="bi bi-bell mb-3 opacity-25" style={{ fontSize: '48px' }}></i>
                     <p className="fw-medium">No announcements yet.</p>
                     {canPost && <small>Keep your students updated by posting an announcement.</small>}
                 </div>

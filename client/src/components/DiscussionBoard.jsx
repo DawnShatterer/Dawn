@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCourseThreads, getThreadDetails, createThread, createReply, deleteThread, deleteReply } from '../api/discussionService';
 import { Card, Button, Form, Spinner, Alert, Badge, Row, Col } from 'react-bootstrap';
-import { MessageSquare, MessageCircle, Send, ArrowLeft, Trash2, User } from 'lucide-react';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 
 const ThreadView = ({ threadId, onBack, currentUserId, userRole }) => {
     const queryClient = useQueryClient();
@@ -40,7 +40,7 @@ const ThreadView = ({ threadId, onBack, currentUserId, userRole }) => {
     return (
         <div className="animate-fade-in">
             <Button variant="link" className="text-decoration-none p-0 mb-3 d-flex align-items-center" onClick={onBack}>
-                <ArrowLeft size={16} className="me-1" /> Back to Discussions
+                <i className="bi bi-arrow-left me-1" style={{ fontSize: '16px' }}></i> Back to Discussions
             </Button>
             
             <Card className="border-0 shadow-sm mb-4 border-start border-4 border-primary">
@@ -48,7 +48,7 @@ const ThreadView = ({ threadId, onBack, currentUserId, userRole }) => {
                     <h4 className="fw-bold mb-3">{thread.title}</h4>
                     <p className="fs-5 mb-4" style={{ whiteSpace: 'pre-wrap' }}>{thread.content}</p>
                     <div className="d-flex align-items-center text-muted small border-top pt-3">
-                        <User size={14} className="me-1" />
+                        <i className="bi bi-person me-1" style={{ fontSize: '14px' }}></i>
                         <span className="fw-bold me-2">{thread.authorName}</span>
                         <Badge bg="light" text="dark" className="me-3">{thread.authorRole}</Badge>
                         <span>{new Date(thread.createdAt).toLocaleString()}</span>
@@ -57,7 +57,7 @@ const ThreadView = ({ threadId, onBack, currentUserId, userRole }) => {
             </Card>
 
             <h5 className="fw-bold mb-3 d-flex align-items-center">
-                <MessageCircle size={18} className="me-2 text-primary" /> 
+                <i className="bi bi-chat-dots me-2 text-primary" style={{ fontSize: '18px' }}></i> 
                 {thread.replies?.length || 0} Replies
             </h5>
 
@@ -68,7 +68,7 @@ const ThreadView = ({ threadId, onBack, currentUserId, userRole }) => {
                             <p className="mb-2" style={{ whiteSpace: 'pre-wrap' }}>{r.content}</p>
                             {(r.authorId === currentUserId || isTeacherOrAdmin) && (
                                 <Button variant="link" size="sm" className="text-danger p-0 ms-2" onClick={() => { if(window.confirm("Delete reply?")) delReplyMutation.mutate(r.id); }}>
-                                    <Trash2 size={14} />
+                                    <i className="bi bi-trash" style={{ fontSize: '14px' }}></i>
                                 </Button>
                             )}
                         </div>
@@ -96,7 +96,7 @@ const ThreadView = ({ threadId, onBack, currentUserId, userRole }) => {
                         </Form.Group>
                         <div className="d-flex justify-content-end">
                             <Button variant="primary" type="submit" size="sm" className="fw-bold px-4" disabled={replyMutation.isPending}>
-                                {replyMutation.isPending ? 'Posting...' : <><Send size={14} className="me-1"/> Post Reply</>}
+                                {replyMutation.isPending ? 'Posting...' : <><i className="bi bi-send me-1" style={{ fontSize: '14px' }}></i> Post Reply</>}
                             </Button>
                         </div>
                     </Form>
@@ -143,7 +143,7 @@ const DiscussionBoard = ({ courseId, currentUserId, userRole }) => {
         <div>
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <h4 className="fw-bold m-0 d-flex align-items-center text-primary">
-                    <MessageSquare size={20} className="me-2" /> Class Discussions
+                    <i className="bi bi-chat-square-text me-2" style={{ fontSize: '20px' }}></i> Class Discussions
                 </h4>
                 <Button variant="primary" size="sm" onClick={() => setShowNewThread(!showNewThread)} className="fw-bold">
                     {showNewThread ? 'Cancel' : 'Start Discussion'}
@@ -175,7 +175,7 @@ const DiscussionBoard = ({ courseId, currentUserId, userRole }) => {
             
             {!isLoading && threads?.length === 0 && (
                 <div className="text-center py-5 text-muted">
-                    <MessageCircle size={48} className="opacity-25 mb-3" />
+                    <i className="bi bi-chat-dots opacity-25 mb-3" style={{ fontSize: '48px' }}></i>
                     <p>No discussions yet. Be the first to start one!</p>
                 </div>
             )}
@@ -191,13 +191,13 @@ const DiscussionBoard = ({ courseId, currentUserId, userRole }) => {
                                     <Badge bg="light" text="dark" className="me-3">{t.authorRole}</Badge>
                                     <span className="me-3">{new Date(t.createdAt).toLocaleDateString()}</span>
                                     <span className="d-flex align-items-center text-info">
-                                        <MessageCircle size={14} className="me-1"/> {t.replyCount} Replies
+                                        <i className="bi bi-chat-dots me-1" style={{ fontSize: '14px' }}></i> {t.replyCount} Replies
                                     </span>
                                 </div>
                             </div>
                             {(t.authorId === currentUserId || isTeacherOrAdmin) && (
                                 <Button variant="link" size="sm" className="text-danger p-0 ms-3 z-3" onClick={(e) => { e.stopPropagation(); if(window.confirm('Delete thread completely?')) deleteMutation.mutate(t.id); }}>
-                                    <Trash2 size={16} />
+                                    <i className="bi bi-trash" style={{ fontSize: '16px' }}></i>
                                 </Button>
                             )}
                         </div>

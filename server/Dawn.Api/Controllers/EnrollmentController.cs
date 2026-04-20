@@ -27,54 +27,13 @@ namespace Dawn.Api.Controllers
         }
 
         /// <summary>
-        /// Enroll the current student in a course.
+        /// Self-enrollment is disabled in institutional LMS mode.
+        /// Module assignment is handled by Staff via bulk-enroll.
         /// </summary>
         [HttpPost]
-        public async Task<ActionResult<EnrollmentDto>> Enroll(EnrollmentCreateDto dto)
+        public IActionResult Enroll()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
-                return Unauthorized("User ID not found in token.");
-
-            // Check if course exists
-            var course = await _context.Courses.FindAsync(dto.CourseId);
-            if (course == null)
-                return NotFound(new { Message = "Course not found." });
-
-            if (course.Price > 0)
-                return BadRequest(new { Message = "This is a paid course. Please use the payment gateway." });
-
-            // Check for duplicate enrollment
-            var alreadyEnrolled = await _context.Enrollments
-                .AnyAsync(e => e.StudentId == userId && e.CourseId == dto.CourseId);
-
-            if (alreadyEnrolled)
-                return BadRequest(new { Message = "You are already enrolled in this course." });
-
-            var enrollment = new Enrollment
-            {
-                StudentId = userId,
-                CourseId = dto.CourseId,
-                EnrolledAt = DateTime.UtcNow,
-                Progress = 0
-            };
-
-            _context.Enrollments.Add(enrollment);
-            await _context.SaveChangesAsync();
-
-            // Send Welcome Notification
-            await _notificationService.CreateNotificationAsync(
-                userId, 
-                "Course Enrollment Successful", 
-                $"Welcome to '{course.Title}'! You have successfully enrolled and can now access all course materials."
-            );
-
-            // Reload with Course data for the DTO mapping
-            var created = await _context.Enrollments
-                .Include(e => e.Course)
-                .FirstAsync(e => e.Id == enrollment.Id);
-
-            return Ok(_mapper.Map<EnrollmentDto>(created));
+            return BadRequest(new { Message = "Self-enrollment is disabled. Module assignments are managed by institutional staff." });
         }
 
         /// <summary>
@@ -127,12 +86,12 @@ namespace Dawn.Api.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var userRole = User.FindFirstValue(ClaimTypes.Role);
 
-            // Only the course instructor or an admin can view enrolled students
+            // Only the course instructor, admin, or staff can view enrolled students
             var course = await _context.Courses.FindAsync(courseId);
             if (course == null)
                 return NotFound(new { Message = "Course not found." });
 
-            if (course.InstructorId != userId && userRole?.ToLower() != "admin")
+            if (course.InstructorId != userId && userRole?.ToLower() != "admin" && userRole?.ToLower() != "staff")
                 return Forbid();
 
             var enrollments = await _context.Enrollments
@@ -154,10 +113,78 @@ namespace Dawn.Api.Controllers
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized("User ID not found in token.");
 
-            var enrolled = await _context.Enrollments
-                .AnyAsync(e => e.StudentId == userId && e.CourseId == courseId);
+            var enrollment = await _context.Enrollments
+                .FirstOrDefaultAsync(e => e.StudentId == userId && e.CourseId == courseId);
 
-            return Ok(new { isEnrolled = enrolled });
+            return Ok(new { 
+                isEnrolled = enrollment != null,
+                progress = enrollment?.Progress ?? 0
+            });
+        }
+
+        [HttpPost("bulk-enroll")]
+        [Authorize(Roles = "Admin,Staff")]
+        public async Task<IActionResult> BulkEnroll([FromBody] BulkEnrollDto dto)
+        {
+            // Validate course exists
+            var course = await _context.Courses.FindAsync(dto.CourseId);
+            if (course == null)
+            {
+                return NotFound(new { Message = "Course not found." });
+            }
+
+            // Validate batch exists
+            var batch = await _context.Batches.FindAsync(dto.BatchId);
+            if (batch == null)
+            {
+                return NotFound(new { Message = "Batch not found." });
+            }
+
+            // Find all students in this batch (only users with "Student" role)
+            var studentsInBatch = await _context.Users
+                .Where(u => u.BatchId == dto.BatchId && u.Role == "Student")
+                .Select(u => u.Id)
+                .ToListAsync();
+
+            // Handle empty batch case
+            if (!studentsInBatch.Any())
+            {
+                return Ok(new { enrolled = 0, skipped = 0, total = 0, message = "No students found in this batch." });
+            }
+
+            // Find existing enrollments for these students in this course
+            var existingEnrollments = await _context.Enrollments
+                .Where(e => e.CourseId == dto.CourseId && studentsInBatch.Contains(e.StudentId))
+                .Select(e => e.StudentId)
+                .ToListAsync();
+
+            // Determine who needs to be enrolled (prevent duplicates)
+            var studentsToEnroll = studentsInBatch.Except(existingEnrollments).ToList();
+
+            // Create new enrollment records
+            var newEnrollments = studentsToEnroll.Select(studentId => new Enrollment
+            {
+                StudentId = studentId,
+                CourseId = dto.CourseId,
+                EnrolledAt = DateTime.UtcNow,
+                Progress = 0
+            }).ToList();
+
+            // Only write to database if there are new enrollments
+            if (newEnrollments.Any())
+            {
+                _context.Enrollments.AddRange(newEnrollments);
+                await _context.SaveChangesAsync();
+            }
+
+            // Return counts (enrolled + skipped = total)
+            return Ok(new 
+            { 
+                enrolled = studentsToEnroll.Count, 
+                skipped = existingEnrollments.Count, 
+                total = studentsInBatch.Count,
+                message = $"Successfully assigned {studentsToEnroll.Count} students to {course.Title}."
+            });
         }
     }
 }

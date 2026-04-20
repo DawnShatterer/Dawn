@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, Button, Badge } from 'react-bootstrap';
-import { Video, Calendar, Clock, Link as LinkIcon } from 'lucide-react';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 
 const LiveClassCard = ({ liveClass, isOwner, onDelete }) => {
     const startTime = new Date(liveClass.startTime);
@@ -21,7 +21,7 @@ const LiveClassCard = ({ liveClass, isOwner, onDelete }) => {
                 
                 <div className="d-flex align-items-center mb-3">
                     <div className={`${isUpcoming ? 'bg-primary' : 'bg-secondary'} bg-opacity-10 p-3 rounded-circle me-3`}>
-                        <Video size={24} className={isUpcoming ? 'text-primary' : 'text-secondary'} />
+                        <i className={`bi bi-camera-video ${isUpcoming ? 'text-primary' : 'text-secondary'}`} style={{ fontSize: '24px' }}></i>
                     </div>
                     <div>
                         <h5 className="fw-bold mb-1">{liveClass.title}</h5>
@@ -35,11 +35,11 @@ const LiveClassCard = ({ liveClass, isOwner, onDelete }) => {
 
                 <div className="d-flex flex-wrap gap-4 mb-4 bg-body-tertiary p-3 rounded-3">
                     <div className="d-flex align-items-center">
-                        <Calendar size={18} className="text-primary me-2" />
+                        <i className="bi bi-calendar3 text-primary me-2" style={{ fontSize: '18px' }}></i>
                         <span className="fw-medium">{startTime.toLocaleDateString()}</span>
                     </div>
                     <div className="d-flex align-items-center">
-                        <Clock size={18} className="text-primary me-2" />
+                        <i className="bi bi-clock text-primary me-2" style={{ fontSize: '18px' }}></i>
                         <span className="fw-medium">{startTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                     </div>
                     <div className="d-flex align-items-center">
@@ -55,7 +55,7 @@ const LiveClassCard = ({ liveClass, isOwner, onDelete }) => {
                     target="_blank"
                     rel="noopener noreferrer"
                 >
-                    <LinkIcon size={18} className="me-2" /> 
+                    <i className="bi bi-link-45deg me-2" style={{ fontSize: '18px' }}></i> 
                     {isUpcoming ? "Join Meeting" : "Meeting Link"}
                 </Button>
 

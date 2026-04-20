@@ -3,15 +3,15 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-    // Check local storage or default to 'system'
     const [theme, setTheme] = useState(() => localStorage.getItem('dawn-theme') || 'system');
+    const [resolvedTheme, setResolvedTheme] = useState('light');
 
     useEffect(() => {
         const root = document.documentElement;
         
-        // Function to apply the actual CSS theme
-        const applyTheme = (resolvedTheme) => {
-            root.setAttribute('data-bs-theme', resolvedTheme);
+        const applyTheme = (rTheme) => {
+            root.setAttribute('data-bs-theme', rTheme);
+            setResolvedTheme(rTheme);
         };
 
         if (theme === 'system') {
@@ -26,12 +26,11 @@ export const ThemeProvider = ({ children }) => {
             applyTheme(theme);
         }
 
-        // Save preference
         localStorage.setItem('dawn-theme', theme);
     }, [theme]);
 
     return (
-        <ThemeContext.Provider value={{ theme, setTheme }}>
+        <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
             {children}
         </ThemeContext.Provider>
     );

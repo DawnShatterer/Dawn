@@ -19,24 +19,43 @@ namespace Dawn.Infrastructure.Data
         public DbSet<Quiz> Quizzes { get; set; }
         public DbSet<Question> Questions { get; set; }
         public DbSet<Option> Options { get; set; }
-        public DbSet<Submission> Submissions { get; set; }
+        public DbSet<Submission> Submissions { get; set; } // Note: Quiz submissions
+        public DbSet<AssignmentSubmission> AssignmentSubmissions { get; set; } // Note: Assignments
         public DbSet<DiscussionThread> DiscussionThreads { get; set; }
         public DbSet<DiscussionReply> DiscussionReplies { get; set; }
         public DbSet<Notification> Notifications { get; set; }
-        public DbSet<Certificate> Certificates { get; set; }
+        public DbSet<Batch> Batches { get; set; }
+        public DbSet<SemesterInvoice> SemesterInvoices { get; set; }
+        public DbSet<AttendanceRecord> AttendanceRecords { get; set; }
         public DbSet<Institution> Institutions { get; set; }
         public DbSet<Message> Messages { get; set; }
         public DbSet<Announcement> Announcements { get; set; }
-        public DbSet<PlatformRating> PlatformRatings { get; set; }
         public DbSet<PaymentRecord> PaymentRecords { get; set; }
-        public DbSet<PointsTransaction> PointsTransactions { get; set; }
-        public DbSet<CourseCoupon> CourseCoupons { get; set; }
-        public DbSet<PayoutRequest> PayoutRequests { get; set; }
-        public DbSet<CourseReview> CourseReviews { get; set; }
 
+        public DbSet<StudentSessionLog> StudentSessionLogs { get; set; }
+        public DbSet<LessonProgress> LessonProgresses { get; set; }
+        public DbSet<CourseAssignmentAudit> CourseAssignmentAudits { get; set; }
+
+
+        public DbSet<SupportInquiry> SupportInquiries { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            // 0. Assignment Submissions (PDF/ZIP uploads)
+            builder.Entity<AssignmentSubmission>()
+                .HasOne(s => s.Assignment)
+                .WithMany(a => a.Submissions) // We should add this collection to Assignment.cs too
+                .HasForeignKey(s => s.AssignmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<AssignmentSubmission>()
+                .HasOne(s => s.Student)
+                .WithMany()
+                .HasForeignKey(s => s.StudentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<AssignmentSubmission>().ToTable("AssignmentSubmissions");
 
             // 1. Course & Assignment Relationship (One-to-Many)
             builder.Entity<Assignment>()
@@ -97,13 +116,6 @@ namespace Dawn.Infrastructure.Data
                 .HasForeignKey(q => q.QuizId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // CourseReview Relationship (Prevent cycles)
-            builder.Entity<CourseReview>()
-                .HasOne(cr => cr.Student)
-                .WithMany()
-                .HasForeignKey(cr => cr.StudentId)
-                .OnDelete(DeleteBehavior.NoAction);
-
             builder.Entity<Option>()
                 .HasOne(o => o.Question)
                 .WithMany(q => q.Options)
@@ -154,18 +166,7 @@ namespace Dawn.Infrastructure.Data
                 .HasForeignKey(n => n.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // 10. Certificates
-            builder.Entity<Certificate>()
-                .HasOne(c => c.Student)
-                .WithMany()
-                .HasForeignKey(c => c.StudentId)
-                .OnDelete(DeleteBehavior.Restrict);
 
-            builder.Entity<Certificate>()
-                .HasOne(c => c.Course)
-                .WithMany()
-                .HasForeignKey(c => c.CourseId)
-                .OnDelete(DeleteBehavior.Cascade);
 
             // 11. Institutions Multi-Tenancy
             builder.Entity<ApplicationUser>()
@@ -181,8 +182,7 @@ namespace Dawn.Infrastructure.Data
             builder.Entity<Lesson>().ToTable("Lessons");
             builder.Entity<LiveClass>().ToTable("LiveClasses");
 
-            // 7. Decimal precision
-            builder.Entity<Course>().Property(c => c.Price).HasColumnType("decimal(18,2)");
+            // 7. (Removed)
 
             // 13. Direct Messages
             builder.Entity<Message>()
@@ -218,10 +218,10 @@ namespace Dawn.Infrastructure.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<PaymentRecord>()
-                .HasOne(p => p.Course)
+                .HasOne(p => p.SemesterInvoice)
                 .WithMany()
-                .HasForeignKey(p => p.CourseId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .HasForeignKey(p => p.SemesterInvoiceId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<PaymentRecord>()
                 .Property(p => p.Amount)
@@ -229,50 +229,88 @@ namespace Dawn.Infrastructure.Data
 
             builder.Entity<PaymentRecord>().ToTable("PaymentRecords");
 
-            // 16. Dawn Points Ledger
-            builder.Entity<PointsTransaction>()
-                .HasOne(pt => pt.User)
+
+
+            builder.Entity<StudentSessionLog>().ToTable("StudentSessionLogs");
+
+            // 20. Lesson Progress tracking
+            builder.Entity<LessonProgress>()
+                .HasOne(lp => lp.Student)
                 .WithMany()
-                .HasForeignKey(pt => pt.UserId)
+                .HasForeignKey(lp => lp.StudentId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            builder.Entity<PointsTransaction>().ToTable("PointsTransactions");
-
-            // 17. Course Coupons
-            builder.Entity<CourseCoupon>()
-                .HasOne(c => c.Owner)
+            builder.Entity<LessonProgress>()
+                .HasOne(lp => lp.Lesson)
                 .WithMany()
-                .HasForeignKey(c => c.OwnerId)
+                .HasForeignKey(lp => lp.LessonId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            builder.Entity<CourseCoupon>()
-                .HasOne(c => c.UsedOnCourse)
-                .WithMany()
-                .HasForeignKey(c => c.UsedOnCourseId)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            builder.Entity<CourseCoupon>()
-                .Property(c => c.MaxDiscountAmount)
-                .HasColumnType("decimal(18,2)");
-
-            builder.Entity<CourseCoupon>()
-                .HasIndex(c => c.Code)
+            builder.Entity<LessonProgress>()
+                .HasIndex(lp => new { lp.StudentId, lp.LessonId })
                 .IsUnique();
 
-            builder.Entity<CourseCoupon>().ToTable("CourseCoupons");
+            builder.Entity<LessonProgress>().ToTable("LessonProgresses");
 
-            // 18. Payout Requests
-            builder.Entity<PayoutRequest>()
-                .HasOne(pr => pr.Instructor)
+            // 21. Batches
+            builder.Entity<ApplicationUser>()
+                .HasOne(u => u.Batch)
+                .WithMany(c => c.Students)
+                .HasForeignKey(u => u.BatchId)
+                .OnDelete(DeleteBehavior.SetNull);
+            builder.Entity<Batch>().ToTable("Batches");
+
+            // 22. Semester Invoices
+            builder.Entity<SemesterInvoice>()
+                .HasOne(si => si.Student)
                 .WithMany()
-                .HasForeignKey(pr => pr.InstructorId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<PayoutRequest>()
-                .Property(pr => pr.Amount)
+                .HasForeignKey(si => si.StudentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<SemesterInvoice>()
+                .Property(si => si.AmountNpr)
                 .HasColumnType("decimal(18,2)");
+            builder.Entity<SemesterInvoice>().ToTable("SemesterInvoices");
 
-            builder.Entity<PayoutRequest>().ToTable("PayoutRequests");
+            // 23. Attendance Records
+            builder.Entity<AttendanceRecord>()
+                .HasOne(ar => ar.Student)
+                .WithMany()
+                .HasForeignKey(ar => ar.StudentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<AttendanceRecord>()
+                .HasOne(ar => ar.Module)
+                .WithMany()
+                .HasForeignKey(ar => ar.ModuleId)
+                .OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<AttendanceRecord>().ToTable("AttendanceRecords");
+
+            // 24. Course Assignment Audit Trail
+            builder.Entity<CourseAssignmentAudit>()
+                .HasOne(a => a.Course)
+                .WithMany()
+                .HasForeignKey(a => a.CourseId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            builder.Entity<CourseAssignmentAudit>()
+                .HasOne(a => a.NewTeacher)
+                .WithMany()
+                .HasForeignKey(a => a.NewTeacherId)
+                .OnDelete(DeleteBehavior.Restrict);
+            
+            builder.Entity<CourseAssignmentAudit>()
+                .HasOne(a => a.AdminUser)
+                .WithMany()
+                .HasForeignKey(a => a.AdminUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            
+            builder.Entity<CourseAssignmentAudit>()
+                .HasIndex(a => a.CourseId);
+            
+            builder.Entity<CourseAssignmentAudit>()
+                .HasIndex(a => a.AssignedAt);
+            
+            builder.Entity<CourseAssignmentAudit>().ToTable("CourseAssignmentAudits");
+
         }
     }
 }

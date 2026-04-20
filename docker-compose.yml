@@ -1,4 +1,11 @@
 services:
+  redis:
+    image: redis:alpine
+    container_name: dawn_redis
+    ports:
+      - "6379:6379"
+    restart: always
+
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: dawn_db
@@ -23,8 +30,12 @@ services:
       - ASPNETCORE_URLS=http://+:8080
       # Connects to the 'db' container instead of the host's SQL Express
       - ConnectionStrings__DefaultConnection=Server=db,1433;Database=DawnDb;User Id=sa;Password=YourStrong!Passw0rd123;TrustServerCertificate=True;
+      - Redis=redis:6379
     depends_on:
       - db
+      - redis
+    volumes:
+      - dawn-uploads-data:/app/wwwroot/uploads
 
   frontend:
     build:
@@ -38,3 +49,4 @@ services:
 
 volumes:
   dawn-mssql-data:
+  dawn-uploads-data:

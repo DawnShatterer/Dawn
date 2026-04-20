@@ -480,3 +480,15 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Kiro AI assistant files
+.kiro/
+docs/
+
+# Test files
+client/src/test/
+*.test.js
+*.test.jsx
+*.test.ts
+*.test.tsx
+vitest.config.js

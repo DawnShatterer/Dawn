@@ -1,7 +1,7 @@
 import React from 'react';
 import { Container, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { Home } from 'lucide-react';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 
 const NotFound = () => {
     const navigate = useNavigate();
@@ -19,7 +19,7 @@ const NotFound = () => {
                 onClick={() => navigate('/')} 
                 className="d-flex align-items-center gap-2 rounded-pill px-4"
             >
-                <Home size={20} />
+                <i className="bi bi-house" style={{ fontSize: '20px' }}></i>
                 Back to Home
             </Button>
         </Container>

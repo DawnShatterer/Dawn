@@ -9,9 +9,7 @@ public class MappingProfiles : Profile
     public MappingProfiles()
     {
         // Course mappings
-        CreateMap<Course, CourseDto>()
-            .ForMember(d => d.TotalReviews, o => o.MapFrom(s => s.Reviews != null ? s.Reviews.Count : 0))
-            .ForMember(d => d.AverageRating, o => o.MapFrom(s => s.Reviews != null && s.Reviews.Any() ? Math.Round((decimal)s.Reviews.Average(r => r.Score), 1) : 0m));
+        CreateMap<Course, CourseDto>();
             
         CreateMap<CourseDto, Course>(); // Reverse map handled manually without computing properties
         CreateMap<CourseCreateDto, Course>();
@@ -23,7 +21,6 @@ public class MappingProfiles : Profile
         CreateMap<Enrollment, EnrollmentDto>()
             .ForMember(d => d.CourseTitle, o => o.MapFrom(s => s.Course.Title))
             .ForMember(d => d.CourseDescription, o => o.MapFrom(s => s.Course.Description))
-            .ForMember(d => d.CoursePrice, o => o.MapFrom(s => s.Course.Price))
             .ForMember(d => d.InstructorId, o => o.MapFrom(s => s.Course.InstructorId));
 
         CreateMap<Enrollment, EnrollmentStudentDto>()

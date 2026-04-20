@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate, Link } from 'react-router-dom';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
-import { KeyRound, ArrowLeft } from 'lucide-react';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 import api from '../api/axios';
 
 const ForgotPassword = () => {
@@ -16,9 +16,9 @@ const ForgotPassword = () => {
             return res.data;
         },
         onSuccess: (data) => {
-            setSuccessMessage(data.message || "Reset link sent to your email.");
+            setSuccessMessage(data.message || "Reset code sent to your email.");
             setErrorMessage('');
-            setEmail('');
+            setTimeout(() => navigate(`/reset-password?email=${encodeURIComponent(email)}`), 1500);
         },
         onError: (err) => {
             setErrorMessage(err.response?.data?.message || err.message || "Failed to send reset link.");
@@ -40,9 +40,9 @@ const ForgotPassword = () => {
                     <Card.Body className="p-5">
                         <div className="text-center mb-4">
                             <div className="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex p-3 mb-3">
-                                <KeyRound size={32} />
+                                <i className="bi bi-key" style={{ fontSize: '32px' }}></i>
                             </div>
-                            <h2 className="fw-bold text-body tracking-tight fs-3">Forgot Password?</h2>
+                            <h2 className="fw-bold tracking-tight fs-3">Forgot Password?</h2>
                             <p className="text-muted small">No worries, we'll send you reset instructions.</p>
                         </div>
 
@@ -73,7 +73,7 @@ const ForgotPassword = () => {
 
                         <div className="text-center mt-3">
                             <Link to="/login" className="text-decoration-none text-muted small fw-bold d-inline-flex align-items-center">
-                                <ArrowLeft size={16} className="me-1" /> Back to Login
+                                <i className="bi bi-arrow-left me-1" style={{ fontSize: '16px' }}></i> Back to Login
                             </Link>
                         </div>
                     </Card.Body>

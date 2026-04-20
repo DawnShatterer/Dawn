@@ -31,3 +31,21 @@ export const deleteLesson = async (lessonId) => {
     const response = await api.delete(`/Lessons/${lessonId}`);
     return response.data;
 };
+
+/**
+ * Mark a lesson as complete for the student.
+ * @param {number} lessonId
+ */
+export const completeLesson = async (lessonId) => {
+    const response = await api.post(`/LessonProgress/complete/${lessonId}`);
+    return response.data;
+};
+
+/**
+ * Get list of completed lesson IDs for a specific course.
+ * @param {number} courseId
+ */
+export const getCourseProgressStatus = async (courseId) => {
+    const response = await api.get(`/LessonProgress/status/${courseId}`);
+    return response.data;
+};

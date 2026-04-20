@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, Button, Form, Spinner, Badge } from 'react-bootstrap';
-import { Bot, Send, X, MessageSquare, Minimize2, Trash2, Clock } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { askTutor } from '../api/aiTutorService';
 
@@ -9,7 +8,7 @@ const AITutorChatbot = () => {
     const [isMinimized, setIsMinimized] = useState(false);
     const [messages, setMessages] = useState([
         { 
-            text: "Namaste! 🙏 I'm Dawn, your AI learning assistant. Ask me anything about your studies, courses, or programming concepts!", 
+            text: "Hey! 👋 I'm here to help you with anything on Dawn. Ask away!", 
             sender: 'ai',
             time: new Date(),
             suggestions: ["How do I enroll?", "Study tips", "Programming help", "My progress", "Tell me a joke"]
@@ -81,7 +80,7 @@ const AITutorChatbot = () => {
 
     const handleClearChat = () => {
         setMessages([{ 
-            text: "Chat cleared! 🧹 How can I help you?", 
+            text: "Chat cleared! 🧹 What's on your mind?", 
             sender: 'ai', 
             time: new Date(),
             suggestions: ["How do I enroll?", "Study tips", "Programming help", "Tell me a joke"]
@@ -99,21 +98,12 @@ const AITutorChatbot = () => {
         return (
             <div className="position-fixed" style={{ bottom: '30px', right: '30px', zIndex: 1050 }}>
                 <Button 
-                    className="rounded-circle shadow-lg d-flex align-items-center justify-content-center p-0 position-relative"
-                    style={{ width: '60px', height: '60px', background: 'linear-gradient(135deg, #0d6efd 0%, #6610f2 100%)', border: 'none', animation: 'pulse-glow 2s infinite' }}
+                    className="rounded-circle shadow-lg d-flex align-items-center justify-content-center p-0"
+                    style={{ width: '60px', height: '60px', background: 'linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%)', border: 'none', fontSize: '1.6rem' }}
                     onClick={() => setIsOpen(true)}
                 >
-                    <Bot size={30} className="text-white" />
-                    <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: '9px' }}>
-                        AI
-                    </span>
+                    💬
                 </Button>
-                <style>{`
-                    @keyframes pulse-glow {
-                        0%, 100% { box-shadow: 0 4px 15px rgba(13,110,253,0.4); }
-                        50% { box-shadow: 0 4px 25px rgba(102,16,242,0.6); }
-                    }
-                `}</style>
             </div>
         );
     }
@@ -123,10 +113,10 @@ const AITutorChatbot = () => {
         return (
             <Button 
                 className="position-fixed shadow d-flex align-items-center px-4 py-2"
-                style={{ bottom: '30px', right: '30px', zIndex: 1050, borderRadius: '30px', background: 'linear-gradient(135deg, #0d6efd 0%, #6610f2 100%)', border: 'none', color: 'white' }}
+                style={{ bottom: '30px', right: '30px', zIndex: 1050, borderRadius: '30px', background: 'linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%)', border: 'none', color: 'white' }}
                 onClick={() => setIsMinimized(false)}
             >
-                <MessageSquare size={18} className="me-2" /> Resume Chat
+                💬 <span className="ms-2 fw-bold">Resume Chat</span>
                 <Badge bg="light" text="dark" className="ms-2">{messages.length}</Badge>
             </Button>
         );
@@ -137,28 +127,27 @@ const AITutorChatbot = () => {
         <Card className="position-fixed shadow-lg border-0 overflow-hidden" 
               style={{ bottom: '30px', right: '30px', width: '400px', height: '580px', zIndex: 1050, borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
             
-            <Card.Header className="text-white p-3 border-0 d-flex justify-content-between align-items-center" style={{ background: 'linear-gradient(135deg, #0d6efd 0%, #6610f2 100%)' }}>
+            <Card.Header className="text-white p-3 border-0 d-flex justify-content-between align-items-center" style={{ background: 'linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%)' }}>
                 <div className="d-flex align-items-center">
-                    <div className="bg-body bg-opacity-25 rounded-circle p-2 me-2">
-                        <Bot size={20} className="text-white" />
+                    <div className="bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center me-2" style={{ width: '36px', height: '36px', fontSize: '1.1rem' }}>
+                        💬
                     </div>
                     <div>
-                        <h6 className="m-0 fw-bold">Dawn AI Tutor</h6>
+                        <h6 className="m-0 fw-bold">Dawn Help Desk</h6>
                         <small className="opacity-75" style={{ fontSize: '11px' }}>
-                            <span className="me-1" style={{ color: '#4ade80' }}>●</span>
-                            Online — Always here to help
+                            Ask anything about the platform
                         </small>
                     </div>
                 </div>
-                <div className="d-flex align-items-center">
-                    <Button variant="link" className="text-white p-1 opacity-75" onClick={handleClearChat} title="Clear Chat">
-                        <Trash2 size={16} />
+                <div className="d-flex align-items-center gap-1">
+                    <Button variant="link" className="text-white p-1 opacity-75" onClick={handleClearChat} title="Clear Chat" style={{ fontSize: '1rem', textDecoration: 'none' }}>
+                        🗑️
                     </Button>
-                    <Button variant="link" className="text-white p-1 opacity-75" onClick={() => setIsMinimized(true)}>
-                        <Minimize2 size={16} />
+                    <Button variant="link" className="text-white p-1 opacity-75 fw-bold" onClick={() => setIsMinimized(true)} style={{ fontSize: '1.2rem', textDecoration: 'none', lineHeight: 1 }}>
+                        −
                     </Button>
-                    <Button variant="link" className="text-white p-1 opacity-75" onClick={() => setIsOpen(false)}>
-                        <X size={18} />
+                    <Button variant="link" className="text-white p-1 opacity-75 fw-bold" onClick={() => setIsOpen(false)} style={{ fontSize: '1.2rem', textDecoration: 'none', lineHeight: 1 }}>
+                        ×
                     </Button>
                 </div>
             </Card.Header>
@@ -168,8 +157,8 @@ const AITutorChatbot = () => {
                     <div key={idx} className="mb-3">
                         <div className={`d-flex ${msg.sender === 'user' ? 'justify-content-end' : 'justify-content-start'}`}>
                             {msg.sender === 'ai' && (
-                                <div className="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2 mt-auto mb-auto flex-shrink-0" style={{ width: '30px', height: '30px' }}>
-                                    <Bot size={16} className="text-primary" />
+                                <div className="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2 mt-auto mb-auto flex-shrink-0" style={{ width: '30px', height: '30px', fontSize: '0.85rem' }}>
+                                    🎓
                                 </div>
                             )}
                             <div>
@@ -184,7 +173,6 @@ const AITutorChatbot = () => {
                                     dangerouslySetInnerHTML={{ __html: formatMessage(msg.text) }}
                                 />
                                 <div className={`d-flex align-items-center mt-1 ${msg.sender === 'user' ? 'justify-content-end' : ''}`}>
-                                    <Clock size={10} className="text-muted me-1" />
                                     <small className="text-muted" style={{ fontSize: '10px' }}>{formatTime(msg.time)}</small>
                                 </div>
                             </div>
@@ -213,8 +201,8 @@ const AITutorChatbot = () => {
                 
                 {isTyping && (
                     <div className="d-flex mb-3 justify-content-start align-items-center ms-2">
-                        <div className="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2 flex-shrink-0" style={{ width: '30px', height: '30px' }}>
-                            <Bot size={16} className="text-primary" />
+                        <div className="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2 flex-shrink-0" style={{ width: '30px', height: '30px', fontSize: '0.85rem' }}>
+                            🎓
                         </div>
                         <div className="bg-body shadow-sm p-3 d-flex align-items-center" style={{ borderRadius: '16px 16px 16px 4px' }}>
                             <div className="typing-dots d-flex align-items-center gap-1">
@@ -255,10 +243,10 @@ const AITutorChatbot = () => {
                     <Button 
                         type="submit" 
                         className="position-absolute end-0 top-50 translate-middle-y rounded-circle me-1 p-0 d-flex align-items-center justify-content-center border-0 shadow-sm"
-                        style={{ width: '34px', height: '34px', background: 'linear-gradient(135deg, #0d6efd 0%, #6610f2 100%)' }}
+                        style={{ width: '34px', height: '34px', background: 'linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%)', fontSize: '0.9rem' }}
                         disabled={!input.trim() || isTyping}
                     >
-                        <Send size={14} className="text-white ms-1" />
+                        <span className="text-white" style={{ marginLeft: '2px' }}>→</span>
                     </Button>
                 </Form>
             </Card.Footer>

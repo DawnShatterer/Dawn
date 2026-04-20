@@ -2,12 +2,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getCourseById, updateCourse } from '../api/courseService';
-import { Form, Button, Card, Container, Spinner, Alert, Row, Col } from 'react-bootstrap';
-import { Edit3, ArrowLeft, Image as ImageIcon } from 'lucide-react';
+import { Form, Button, Card, Container, Alert, Row, Col, Spinner } from 'react-bootstrap';
+import GlobalSpinner from '../components/GlobalSpinner';
+import 'bootstrap-icons/font/bootstrap-icons.css';
+import { getFileUrl } from '../utils/fileUtils';
+
+const IT_CATEGORIES = [
+    "Web Development", "Mobile App Development", "Data Science & Analytics", 
+    "Cloud Computing", "Cybersecurity", "Game Development", 
+    "Database Management", "UI/UX Design", "Networking", "Other IT & Software"
+];
 
 const EditCourse = () => {
     const { id } = useParams();
-    const [formData, setFormData] = useState({ title: '', description: '', price: 0 });
+    const [formData, setFormData] = useState({ title: '', description: '', category: 'Web Development', isSequential: false, isPublished: false });
     const [thumbnailFile, setThumbnailFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
     const fileInputRef = useRef(null);
@@ -24,10 +32,12 @@ const EditCourse = () => {
             setFormData({
                 title: course.title || '',
                 description: course.description || '',
-                price: course.price || 0
+                category: course.category || 'Web Development',
+                isSequential: course.isSequential || false,
+                isPublished: course.isPublished || false
             });
             if (course.thumbnailUrl) {
-                setPreviewUrl(course.thumbnailUrl.startsWith('http') ? course.thumbnailUrl : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '')}${course.thumbnailUrl}`);
+                setPreviewUrl(getFileUrl(course.thumbnailUrl));
             }
         }
     }, [course]);
@@ -56,7 +66,10 @@ const EditCourse = () => {
         const data = new FormData();
         data.append('Title', formData.title);
         data.append('Description', formData.description);
-        data.append('Price', formData.price === '' ? 0 : parseFloat(formData.price));
+        data.append('Category', formData.category);
+
+        data.append('IsSequential', formData.isSequential);
+        data.append('IsPublished', formData.isPublished);
         
         if (thumbnailFile) {
             data.append('ThumbnailFile', thumbnailFile);
@@ -66,24 +79,15 @@ const EditCourse = () => {
     };
 
     if (isLoading) {
-        return (
-            <Container className="py-5 text-center">
-                <Spinner animation="border" variant="primary" />
-                <p className="mt-3 text-muted">Loading Course Data...</p>
-            </Container>
-        );
+        return <GlobalSpinner message="Loading course data..." />;
     }
 
     return (
         <Container className="py-4" style={{ maxWidth: '900px' }}>
-            <Button variant="link" className="text-decoration-none text-muted mb-3 p-0" onClick={() => navigate('/analytics')}>
-                <ArrowLeft size={16} className="me-1" /> Back to Dashboard
-            </Button>
-            
             <Card className="border-0 shadow-sm p-4">
                 <div className="d-flex align-items-center mb-4 pb-3 border-bottom">
                     <div className="bg-primary bg-opacity-10 p-2 rounded me-3 text-primary">
-                        <Edit3 size={24} />
+                        <i className="bi bi-pencil-square" style={{ fontSize: '24px' }}></i>
                     </div>
                     <div>
                         <h3 className="mb-0 fw-bold">Edit Course Settings</h3>
@@ -111,6 +115,41 @@ const EditCourse = () => {
                             </Form.Group>
 
                             <Form.Group className="mb-3">
+                                <Form.Label className="fw-semibold">Category</Form.Label>
+                                <Form.Select
+                                    value={formData.category}
+                                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                >
+                                    {IT_CATEGORIES.map((cat, idx) => (
+                                        <option value={cat} key={idx}>{cat}</option>
+                                    ))}
+                                </Form.Select>
+                            </Form.Group>
+
+                            <Form.Group className="mb-3">
+                                <Form.Check
+                                    type="switch"
+                                    id="sequential-switch-edit"
+                                    label="Sequential Learning (Lock videos until previous is watched)"
+                                    checked={formData.isSequential}
+                                    onChange={(e) => setFormData({ ...formData, isSequential: e.target.checked })}
+                                />
+                            </Form.Group>
+
+                            <Form.Group className="mb-3">
+                                <Form.Check
+                                    type="switch"
+                                    id="publish-switch-edit"
+                                    label="Published (Visible to students in the catalog)"
+                                    checked={formData.isPublished}
+                                    onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
+                                />
+                                <Form.Text className="text-muted" style={{ fontSize: '0.75rem', marginLeft: '2.5rem' }}>
+                                    Keep unchecked to save as a private draft.
+                                </Form.Text>
+                            </Form.Group>
+
+                            <Form.Group className="mb-3">
                                 <Form.Label className="fw-semibold">Description</Form.Label>
                                 <Form.Control
                                     as="textarea"
@@ -118,19 +157,6 @@ const EditCourse = () => {
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                     required
-                                />
-                            </Form.Group>
-
-                            <Form.Group className="mb-4">
-                                <Form.Label className="fw-semibold">Price (NPR)</Form.Label>
-                                <Form.Control
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={formData.price}
-                                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                    required
-                                    style={{ maxWidth: '200px' }}
                                 />
                             </Form.Group>
                         </Col>
@@ -147,7 +173,7 @@ const EditCourse = () => {
                                         <img src={previewUrl} alt="Thumbnail Preview" style={{ width: '100%', borderRadius: '4px', objectFit: 'cover' }} />
                                     ) : (
                                         <>
-                                            <ImageIcon size={40} className="text-secondary mb-2" />
+                                            <i className="bi bi-image text-secondary mb-2" style={{ fontSize: '40px' }}></i>
                                             <small className="text-muted fw-bold text-center px-3">Click to upload a new cover image</small>
                                         </>
                                     )}

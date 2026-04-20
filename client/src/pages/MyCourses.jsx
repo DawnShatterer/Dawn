@@ -1,132 +1,234 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getMyEnrollments } from '../api/enrollmentService';
-import { Container, Row, Col, Card, Button, Spinner, Alert, Badge, ProgressBar } from 'react-bootstrap';
-import { BookOpen, PlayCircle, Clock, Award, ChevronRight } from 'lucide-react';
+import { getStudentEngagement } from '../api/analyticsService';
+import { Row, Col, Spinner, Alert } from 'react-bootstrap';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+import { getFileUrl } from '../utils/fileUtils';
+import SkeletonCourseCard from '../components/SkeletonCourseCard';
 
 const MyCourses = () => {
     const navigate = useNavigate();
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 6;
+    
     const { data: enrollments, isLoading, isError } = useQuery({
         queryKey: ['my-enrollments'],
         queryFn: getMyEnrollments
     });
+    
+    const { data: engagementData } = useQuery({ 
+        queryKey: ['student-engagement'], 
+        queryFn: getStudentEngagement 
+    });
 
-    if (isLoading) {
-        return (
-            <Container className="py-5 text-center">
-                <Spinner animation="border" variant="primary" />
-                <p className="mt-3 text-muted">Loading your classrooms...</p>
-            </Container>
-        );
-    }
+    // Pagination logic
+    const totalPages = Math.ceil((enrollments?.length || 0) / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentEnrollments = enrollments?.slice(startIndex, endIndex) || [];
 
     if (isError) {
         return (
-            <Container className="py-5">
+            <div className="rc-page">
                 <Alert variant="danger">Failed to load your courses. Please try again later.</Alert>
-            </Container>
+            </div>
         );
     }
 
-    const apiBase = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5159';
+    const chartTextColor = 'var(--chart-text-color)';
 
     return (
-        <Container className="py-4" style={{ maxWidth: '1000px' }}>
-            <div className="d-flex align-items-center mb-4">
-                <div className="bg-primary bg-opacity-10 p-3 rounded-circle me-3 shadow-sm">
-                    <BookOpen size={32} className="text-primary" />
-                </div>
-                <div>
-                    <h2 className="fw-bold mb-0">My Classrooms</h2>
-                    <p className="text-muted mb-0">Continue where you left off in your enrolled subjects.</p>
-                </div>
+        <div className="rc-page">
+            {/* ── Header ── */}
+            <div className="rc-page-header">
+                <h2>My Classrooms</h2>
+                <p>Continue where you left off in your enrolled subjects.</p>
             </div>
 
-            {enrollments?.length === 0 ? (
-                <Card className="border-0 shadow-sm rounded-4 text-center p-5">
-                    <div className="py-4">
-                        <div className="bg-light d-inline-flex p-4 rounded-circle mb-3">
-                            <BookOpen size={48} className="text-muted" />
+            {/* ── Study Analysis Stats ── */}
+            <div className="rc-section-title">
+                Study Analysis
+                <span className="rc-badge" style={{ background: 'var(--stat-bg-success)', color: 'var(--stat-color-success)', marginLeft: 'auto' }}>Last 7 Days</span>
+            </div>
+
+            <Row className="g-3 mb-4">
+                <Col lg={8}>
+                    <div className="rc-chart-card">
+                        <div className="rc-chart-header">
+                            <div className="rc-chart-title">
+                                <i className="bi bi-graph-up" style={{ fontSize: '16px', color: 'var(--stat-color-success)' }}></i>
+                                Learning Velocity
+                            </div>
+                            <span style={{ fontSize: '0.72rem', opacity: 0.4 }}>Daily study minutes</span>
                         </div>
-                        <h4 className="fw-bold">No Enrollments Yet</h4>
-                        <p className="text-muted mb-4 mx-auto" style={{ maxWidth: '400px' }}>
-                            You haven't enrolled in any courses yet. Explore our course catalog to find something that interests you!
-                        </p>
-                        <Button variant="primary" className="fw-bold px-4 rounded-pill" onClick={() => navigate('/courses')}>
-                            Browse Subjects
-                        </Button>
+                        <div style={{ height: '220px' }}>
+                            {engagementData?.dailyActivity && engagementData.dailyActivity.length > 0 ? (
+                                <Bar 
+                                    data={{
+                                        labels: engagementData.dailyActivity.map(d => d.day || d.Day),
+                                        datasets: [{
+                                            label: 'Minutes',
+                                            data: engagementData.dailyActivity.map(d => d.minutes || d.Minutes || 0),
+                                            backgroundColor: 'var(--stat-bg-success)',
+                                            borderColor: 'var(--stat-color-success)',
+                                            borderWidth: 2,
+                                            borderRadius: 8,
+                                            borderSkipped: false,
+                                        }]
+                                    }}
+                                    options={{
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        scales: { 
+                                            y: { beginAtZero: true, grid: { color: 'var(--chart-grid-color)' }, ticks: { color: chartTextColor, font: { size: 10 } } },
+                                            x: { grid: { display: false }, ticks: { color: chartTextColor, font: { size: 10, weight: '600' } } }
+                                        },
+                                        plugins: { legend: { display: false }, tooltip: { cornerRadius: 8, padding: 12, backgroundColor: '#1a1d23' } }
+                                    }}
+                                />
+                            ) : (
+                                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.3 }}>
+                                    <i className="bi bi-clock" style={{ fontSize: '36px', marginBottom: '0.5rem' }}></i>
+                                    <span style={{ fontSize: '0.78rem', fontWeight: 600 }}>No activity tracked this week yet.</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </Card>
+                </Col>
+                <Col lg={4}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', height: '100%' }}>
+                        <div className="rc-card" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                                <div className="rc-stat-icon" style={{ background: 'var(--stat-bg-warning)' }}>
+                                    <i className="bi bi-fire" style={{ fontSize: '20px', color: 'var(--stat-color-warning)' }}></i>
+                                </div>
+                                <div>
+                                    <div className="rc-stat-value">{engagementData?.streak || 0}</div>
+                                    <div className="rc-stat-label">Day Streak</div>
+                                </div>
+                            </div>
+                            
+                            <p style={{ fontSize: '0.72rem', opacity: 0.4, margin: 0, lineHeight: 1.4 }}>
+                                Consistent learning increases retention by <span style={{ color: 'var(--stat-color-success)', fontWeight: 700 }}>40%</span>.
+                            </p>
+                        </div>
+                        <div className="rc-card" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                                <div className="rc-stat-icon" style={{ background: 'var(--stat-bg-info)' }}>
+                                    <i className="bi bi-clock" style={{ fontSize: '20px', color: 'var(--stat-color-info)' }}></i>
+                                </div>
+                                <div>
+                                    <div className="rc-stat-value">{engagementData?.recentSessionCount || 0}</div>
+                                    <div className="rc-stat-label">Sessions Logged</div>
+                                </div>
+                            </div>
+                            <div className="rc-progress-wrap" style={{ marginBottom: 0 }}>
+                                <div className="rc-progress-label">
+                                    <span>Weekly Goal</span>
+                                    <span>5 Hrs</span>
+                                </div>
+                                <div className="rc-progress-bar">
+                                    <div className="rc-progress-fill" style={{ width: `${engagementData?.totalMinutes ? Math.min((engagementData.totalMinutes / 300) * 100, 100) : 0}%`, background: 'var(--stat-color-info)' }}></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </Col>
+            </Row>
+
+            {/* ── Enrolled Courses ── */}
+            <div className="rc-section-title">Enrolled Courses</div>
+
+            {isLoading ? (
+                <Row className="g-3">
+                    <SkeletonCourseCard count={6} />
+                </Row>
+            ) : enrollments?.length === 0 ? (
+                <div className="rc-empty">
+                    <i className="bi bi-book" style={{ fontSize: '42px', opacity: 0.3 }}></i>
+                    <h5>No Enrollments Yet</h5>
+                    <p>You haven't enrolled in any courses yet. Explore our catalog to find something that interests you!</p>
+                    <button className="rc-pill-btn primary" onClick={() => navigate('/courses')}>Browse Subjects</button>
+                </div>
             ) : (
-                <Row className="g-4">
-                    {enrollments?.map((enrollment) => (
-                        <Col key={enrollment.id} lg={6}>
-                            <Card className="border-0 shadow-sm rounded-4 overflow-hidden h-100 position-relative hover-lift">
-                                <Row className="g-0 h-100">
-                                    <Col md={5}>
-                                        <div className="h-100 position-relative" style={{ minHeight: '180px' }}>
-                                            {enrollment.thumbnailUrl ? (
-                                                <img 
-                                                    src={enrollment.thumbnailUrl.startsWith('http') ? enrollment.thumbnailUrl : `${apiBase}${enrollment.thumbnailUrl}`} 
-                                                    alt="Thumbnail" 
-                                                    className="w-100 h-100" 
-                                                    style={{ objectFit: 'cover' }} 
-                                                />
-                                            ) : (
-                                                <div className="w-100 h-100 bg-primary bg-opacity-10 d-flex align-items-center justify-content-center">
-                                                    <BookOpen size={40} className="text-primary opacity-25" />
-                                                </div>
-                                            )}
-                                            <div className="position-absolute top-0 start-0 m-2">
-                                                <Badge bg="primary" className="shadow-sm">{enrollment.category || 'General'}</Badge>
+                <>
+                    <Row className="g-3">
+                        {currentEnrollments.map((enrollment) => (
+                            <Col key={enrollment.id} lg={6} xl={4}>
+                                <div className="rc-enrollment-card" onClick={() => navigate(`/courses/${enrollment.courseId}`)}>
+                                    <div className="rc-enroll-thumb">
+                                        {enrollment.thumbnailUrl ? (
+                                            <img src={getFileUrl(enrollment.thumbnailUrl)} alt="Thumbnail" />
+                                        ) : (
+                                            <div style={{ width: '100%', height: '100%', background: 'var(--stat-bg-success)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <i className="bi bi-book" style={{ fontSize: '32px', opacity: 0.15 }}></i>
+                                            </div>
+                                        )}
+                                        <span className="rc-badge" style={{ position: 'absolute', top: '8px', left: '8px', background: 'var(--stat-color-success)', color: '#fff' }}>
+                                            {enrollment.category || 'General'}
+                                        </span>
+                                    </div>
+                                    <div className="rc-enroll-body">
+                                        <div className="rc-enroll-title">{enrollment.title}</div>
+                                        <div className="rc-enroll-meta">{enrollment.instructorName || 'Dawn Instructor'}</div>
+                                        
+                                        <div className="rc-progress-wrap">
+                                            <div className="rc-progress-label">
+                                                <span>Progress</span>
+                                                <span style={{ color: 'var(--stat-color-success)' }}>{enrollment.progress || 0}%</span>
+                                            </div>
+                                            <div className="rc-progress-bar">
+                                                <div className="rc-progress-fill" style={{ width: `${enrollment.progress || 0}%`, background: 'var(--stat-color-success)' }}></div>
                                             </div>
                                         </div>
-                                    </Col>
-                                    <Col md={7}>
-                                        <Card.Body className="d-flex flex-column justify-content-between p-4 h-100">
-                                            <div>
-                                                <h5 className="fw-bold mb-2 text-truncate-2" style={{ lineHeight: '1.4' }}>{enrollment.title}</h5>
-                                                <p className="text-muted small mb-3 text-truncate-2" style={{ fontSize: '0.8rem' }}>{enrollment.instructorName || 'Dawn Instructor'}</p>
-                                                
-                                                <div className="mb-3">
-                                                    <div className="d-flex justify-content-between align-items-center mb-1">
-                                                        <span className="small text-muted fw-medium">Progress</span>
-                                                        <span className="small fw-bold text-primary">{enrollment.progress || 0}%</span>
-                                                    </div>
-                                                    <ProgressBar now={enrollment.progress || 0} variant="primary" style={{ height: '6px' }} className="rounded-pill shadow-sm" />
-                                                </div>
-                                            </div>
 
-                                            <div className="d-grid">
-                                                <Button 
-                                                    variant="primary" 
-                                                    className="rounded-3 fw-bold d-flex align-items-center justify-content-center"
-                                                    onClick={() => navigate(`/courses/${enrollment.id}`)}
-                                                >
-                                                    <PlayCircle size={18} className="me-2" /> Continue Subject
-                                                </Button>
-                                            </div>
-                                        </Card.Body>
-                                    </Col>
-                                </Row>
-                            </Card>
-                        </Col>
-                    ))}
-                </Row>
+                                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                                            <button className="rc-continue-btn" style={{ flex: 1 }} onClick={(e) => { e.stopPropagation(); navigate(`/courses/${enrollment.courseId}`); }}>
+                                                <i className="bi bi-play-circle" style={{ fontSize: '16px' }}></i> Continue
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </Col>
+                        ))}
+                    </Row>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', marginTop: '2rem' }}>
+                            <button 
+                                className="rc-pill-btn secondary" 
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                style={{ opacity: currentPage === 1 ? 0.5 : 1 }}
+                            >
+                                <i className="bi bi-chevron-left"></i> Previous
+                            </button>
+                            <span style={{ fontSize: '0.9rem', opacity: 0.7 }}>
+                                Page {currentPage} of {totalPages}
+                            </span>
+                            <button 
+                                className="rc-pill-btn secondary" 
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                style={{ opacity: currentPage === totalPages ? 0.5 : 1 }}
+                            >
+                                Next <i className="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    )}
+                </>
             )}
 
-            <style>{`
-                .text-truncate-2 {
-                    display: -webkit-box;
-                    -webkit-line-clamp: 2;
-                    -webkit-box-orient: vertical;
-                    overflow: hidden;
-                }
-                .hover-lift { transition: transform 0.2s; }
-                .hover-lift:hover { transform: translateY(-5px); }
-            `}</style>
-        </Container>
+
+        </div>
     );
 };
 

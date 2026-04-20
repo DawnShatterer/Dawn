@@ -68,6 +68,9 @@ namespace Dawn.Infrastructure.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
+                    b.Property<int?>("BatchId")
+                        .HasColumnType("int");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
@@ -82,21 +85,21 @@ namespace Dawn.Infrastructure.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<string>("EmailVerificationCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("EmailVerificationCodeExpiry")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("ForcePasswordChange")
+                        .HasColumnType("bit");
+
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Grade")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("GuideLearn")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("GuideMock")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("GuideTest")
-                        .HasColumnType("bit");
 
                     b.Property<int?>("InstitutionId")
                         .HasColumnType("int");
@@ -130,6 +133,15 @@ namespace Dawn.Infrastructure.Migrations
                     b.Property<string>("PasswordHash")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("PasswordResetCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("PasswordResetCodeExpiry")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PersonalEmail")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Phone")
                         .HasColumnType("nvarchar(max)");
 
@@ -160,6 +172,9 @@ namespace Dawn.Infrastructure.Migrations
                     b.Property<string>("ProfilePictureUrl")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("RecoveryEmail")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -175,6 +190,8 @@ namespace Dawn.Infrastructure.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BatchId");
 
                     b.HasIndex("InstitutionId");
 
@@ -224,7 +241,56 @@ namespace Dawn.Infrastructure.Migrations
                     b.ToTable("Assignments", (string)null);
                 });
 
-            modelBuilder.Entity("Dawn.Core.Entities.Certificate", b =>
+            modelBuilder.Entity("Dawn.Core.Entities.AssignmentSubmission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AssignmentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Feedback")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FileUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("Grade")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("GradedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("GradedByInstructorId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignmentId");
+
+                    b.HasIndex("StudentId");
+
+                    b.ToTable("AssignmentSubmissions", (string)null);
+                });
+
+            modelBuilder.Entity("Dawn.Core.Entities.AttendanceRecord", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -238,16 +304,19 @@ namespace Dawn.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("FileUrl")
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ModuleId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("StudentId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -256,9 +325,44 @@ namespace Dawn.Infrastructure.Migrations
 
                     b.HasIndex("CourseId");
 
+                    b.HasIndex("ModuleId");
+
                     b.HasIndex("StudentId");
 
-                    b.ToTable("Certificates");
+                    b.ToTable("AttendanceRecords", (string)null);
+                });
+
+            modelBuilder.Entity("Dawn.Core.Entities.Batch", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ExpectedGraduationDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Batches", (string)null);
                 });
 
             modelBuilder.Entity("Dawn.Core.Entities.Course", b =>
@@ -268,6 +372,10 @@ namespace Dawn.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -283,8 +391,14 @@ namespace Dawn.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSequential")
+                        .HasColumnType("bit");
 
                     b.Property<string>("ThumbnailUrl")
                         .HasColumnType("nvarchar(max)");
@@ -305,7 +419,7 @@ namespace Dawn.Infrastructure.Migrations
                     b.ToTable("Courses", (string)null);
                 });
 
-            modelBuilder.Entity("Dawn.Core.Entities.CourseCoupon", b =>
+            modelBuilder.Entity("Dawn.Core.Entities.CourseAssignmentAudit", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -313,61 +427,12 @@ namespace Dawn.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Code")
+                    b.Property<string>("AdminUserId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime>("AssignedAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<int>("DiscountPercent")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsUsed")
-                        .HasColumnType("bit");
-
-                    b.Property<decimal?>("MaxDiscountAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("OwnerId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("UsedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("UsedOnCourseId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.HasIndex("OwnerId");
-
-                    b.HasIndex("UsedOnCourseId");
-
-                    b.ToTable("CourseCoupons", (string)null);
-                });
-
-            modelBuilder.Entity("Dawn.Core.Entities.CourseReview", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Comment")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<int>("CourseId")
                         .HasColumnType("int");
@@ -375,20 +440,27 @@ namespace Dawn.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("Score")
-                        .HasColumnType("int");
-
-                    b.Property<string>("StudentId")
+                    b.Property<string>("NewTeacherId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("PreviousTeacherId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("AdminUserId");
+
+                    b.HasIndex("AssignedAt");
 
                     b.HasIndex("CourseId");
 
-                    b.HasIndex("StudentId");
+                    b.HasIndex("NewTeacherId");
 
-                    b.ToTable("CourseReviews");
+                    b.ToTable("CourseAssignmentAudits", (string)null);
                 });
 
             modelBuilder.Entity("Dawn.Core.Entities.DiscussionReply", b =>
@@ -547,6 +619,9 @@ namespace Dawn.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("CompletionWeight")
+                        .HasColumnType("int");
+
                     b.Property<int>("CourseId")
                         .HasColumnType("int");
 
@@ -556,6 +631,9 @@ namespace Dawn.Infrastructure.Migrations
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsFreePreview")
+                        .HasColumnType("bit");
 
                     b.Property<int>("Order")
                         .HasColumnType("int");
@@ -581,6 +659,43 @@ namespace Dawn.Infrastructure.Migrations
                     b.HasIndex("CourseId");
 
                     b.ToTable("Lessons", (string)null);
+                });
+
+            modelBuilder.Entity("Dawn.Core.Entities.LessonProgress", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("LessonId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LessonId");
+
+                    b.HasIndex("StudentId", "LessonId")
+                        .IsUnique();
+
+                    b.ToTable("LessonProgresses", (string)null);
                 });
 
             modelBuilder.Entity("Dawn.Core.Entities.LiveClass", b =>
@@ -680,6 +795,9 @@ namespace Dawn.Infrastructure.Migrations
                     b.Property<bool>("IsRead")
                         .HasColumnType("bit");
 
+                    b.Property<string>("Link")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Message")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -747,15 +865,15 @@ namespace Dawn.Infrastructure.Migrations
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("CourseId")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Gateway")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("SemesterInvoiceId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -774,123 +892,11 @@ namespace Dawn.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CourseId");
+                    b.HasIndex("SemesterInvoiceId");
 
                     b.HasIndex("StudentId");
 
                     b.ToTable("PaymentRecords", (string)null);
-                });
-
-            modelBuilder.Entity("Dawn.Core.Entities.PayoutRequest", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AdminNotes")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("InstructorId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("PaymentMethod")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<DateTime?>("ProcessedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("InstructorId");
-
-                    b.ToTable("PayoutRequests", (string)null);
-                });
-
-            modelBuilder.Entity("Dawn.Core.Entities.PlatformRating", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Comment")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Score")
-                        .HasColumnType("int");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("PlatformRatings");
-                });
-
-            modelBuilder.Entity("Dawn.Core.Entities.PointsTransaction", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Points")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("TransactionDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("PointsTransactions", (string)null);
                 });
 
             modelBuilder.Entity("Dawn.Core.Entities.Question", b =>
@@ -959,6 +965,93 @@ namespace Dawn.Infrastructure.Migrations
                     b.ToTable("Quizzes");
                 });
 
+            modelBuilder.Entity("Dawn.Core.Entities.SemesterInvoice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("AmountNpr")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("DueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ESewaReceiptUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ESewaTransactionId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsPaid")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudentId");
+
+                    b.ToTable("SemesterInvoices", (string)null);
+                });
+
+            modelBuilder.Entity("Dawn.Core.Entities.StudentSessionLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CourseId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Device")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("DurationSeconds")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("EndTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IpAddress")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("LessonId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("StudentSessionLogs", (string)null);
+                });
+
             modelBuilder.Entity("Dawn.Core.Entities.Submission", b =>
                 {
                     b.Property<int>("Id")
@@ -993,6 +1086,45 @@ namespace Dawn.Infrastructure.Migrations
                     b.HasIndex("StudentId");
 
                     b.ToTable("Submissions");
+                });
+
+            modelBuilder.Entity("Dawn.Core.Entities.SupportInquiry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SupportInquiries");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -1149,10 +1281,17 @@ namespace Dawn.Infrastructure.Migrations
 
             modelBuilder.Entity("Dawn.Core.Entities.ApplicationUser", b =>
                 {
+                    b.HasOne("Dawn.Core.Entities.Batch", "Batch")
+                        .WithMany("Students")
+                        .HasForeignKey("BatchId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Dawn.Core.Entities.Institution", "Institution")
                         .WithMany("Users")
                         .HasForeignKey("InstitutionId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Batch");
 
                     b.Navigation("Institution");
                 });
@@ -1168,12 +1307,13 @@ namespace Dawn.Infrastructure.Migrations
                     b.Navigation("Course");
                 });
 
-            modelBuilder.Entity("Dawn.Core.Entities.Certificate", b =>
+            modelBuilder.Entity("Dawn.Core.Entities.AssignmentSubmission", b =>
                 {
-                    b.HasOne("Dawn.Core.Entities.Course", "Course")
-                        .WithMany()
-                        .HasForeignKey("CourseId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                    b.HasOne("Dawn.Core.Entities.Assignment", "Assignment")
+                        .WithMany("Submissions")
+                        .HasForeignKey("AssignmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("Dawn.Core.Entities.ApplicationUser", "Student")
                         .WithMany()
@@ -1181,7 +1321,30 @@ namespace Dawn.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Course");
+                    b.Navigation("Assignment");
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("Dawn.Core.Entities.AttendanceRecord", b =>
+                {
+                    b.HasOne("Dawn.Core.Entities.Course", null)
+                        .WithMany("AttendanceRecords")
+                        .HasForeignKey("CourseId");
+
+                    b.HasOne("Dawn.Core.Entities.Course", "Module")
+                        .WithMany()
+                        .HasForeignKey("ModuleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Dawn.Core.Entities.ApplicationUser", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Module");
 
                     b.Navigation("Student");
                 });
@@ -1199,41 +1362,31 @@ namespace Dawn.Infrastructure.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Dawn.Core.Entities.CourseCoupon", b =>
+            modelBuilder.Entity("Dawn.Core.Entities.CourseAssignmentAudit", b =>
                 {
-                    b.HasOne("Dawn.Core.Entities.ApplicationUser", "Owner")
+                    b.HasOne("Dawn.Core.Entities.ApplicationUser", "AdminUser")
                         .WithMany()
-                        .HasForeignKey("OwnerId")
+                        .HasForeignKey("AdminUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Dawn.Core.Entities.Course", "UsedOnCourse")
-                        .WithMany()
-                        .HasForeignKey("UsedOnCourseId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Owner");
-
-                    b.Navigation("UsedOnCourse");
-                });
-
-            modelBuilder.Entity("Dawn.Core.Entities.CourseReview", b =>
-                {
                     b.HasOne("Dawn.Core.Entities.Course", "Course")
-                        .WithMany("Reviews")
+                        .WithMany()
                         .HasForeignKey("CourseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Dawn.Core.Entities.ApplicationUser", "Student")
+                    b.HasOne("Dawn.Core.Entities.ApplicationUser", "NewTeacher")
                         .WithMany()
-                        .HasForeignKey("StudentId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasForeignKey("NewTeacherId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("AdminUser");
 
                     b.Navigation("Course");
 
-                    b.Navigation("Student");
+                    b.Navigation("NewTeacher");
                 });
 
             modelBuilder.Entity("Dawn.Core.Entities.DiscussionReply", b =>
@@ -1304,6 +1457,25 @@ namespace Dawn.Infrastructure.Migrations
                     b.Navigation("Course");
                 });
 
+            modelBuilder.Entity("Dawn.Core.Entities.LessonProgress", b =>
+                {
+                    b.HasOne("Dawn.Core.Entities.Lesson", "Lesson")
+                        .WithMany()
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Dawn.Core.Entities.ApplicationUser", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lesson");
+
+                    b.Navigation("Student");
+                });
+
             modelBuilder.Entity("Dawn.Core.Entities.LiveClass", b =>
                 {
                     b.HasOne("Dawn.Core.Entities.Course", "Course")
@@ -1358,11 +1530,10 @@ namespace Dawn.Infrastructure.Migrations
 
             modelBuilder.Entity("Dawn.Core.Entities.PaymentRecord", b =>
                 {
-                    b.HasOne("Dawn.Core.Entities.Course", "Course")
+                    b.HasOne("Dawn.Core.Entities.SemesterInvoice", "SemesterInvoice")
                         .WithMany()
-                        .HasForeignKey("CourseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("SemesterInvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Dawn.Core.Entities.ApplicationUser", "Student")
                         .WithMany()
@@ -1370,42 +1541,9 @@ namespace Dawn.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Course");
+                    b.Navigation("SemesterInvoice");
 
                     b.Navigation("Student");
-                });
-
-            modelBuilder.Entity("Dawn.Core.Entities.PayoutRequest", b =>
-                {
-                    b.HasOne("Dawn.Core.Entities.ApplicationUser", "Instructor")
-                        .WithMany()
-                        .HasForeignKey("InstructorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Instructor");
-                });
-
-            modelBuilder.Entity("Dawn.Core.Entities.PlatformRating", b =>
-                {
-                    b.HasOne("Dawn.Core.Entities.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Dawn.Core.Entities.PointsTransaction", b =>
-                {
-                    b.HasOne("Dawn.Core.Entities.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Dawn.Core.Entities.Question", b =>
@@ -1428,6 +1566,28 @@ namespace Dawn.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Course");
+                });
+
+            modelBuilder.Entity("Dawn.Core.Entities.SemesterInvoice", b =>
+                {
+                    b.HasOne("Dawn.Core.Entities.ApplicationUser", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("Dawn.Core.Entities.StudentSessionLog", b =>
+                {
+                    b.HasOne("Dawn.Core.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Dawn.Core.Entities.Submission", b =>
@@ -1500,11 +1660,23 @@ namespace Dawn.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Dawn.Core.Entities.Assignment", b =>
+                {
+                    b.Navigation("Submissions");
+                });
+
+            modelBuilder.Entity("Dawn.Core.Entities.Batch", b =>
+                {
+                    b.Navigation("Students");
+                });
+
             modelBuilder.Entity("Dawn.Core.Entities.Course", b =>
                 {
                     b.Navigation("Announcements");
 
                     b.Navigation("Assignments");
+
+                    b.Navigation("AttendanceRecords");
 
                     b.Navigation("Enrollments");
 
@@ -1513,8 +1685,6 @@ namespace Dawn.Infrastructure.Migrations
                     b.Navigation("LiveClasses");
 
                     b.Navigation("Quizzes");
-
-                    b.Navigation("Reviews");
                 });
 
             modelBuilder.Entity("Dawn.Core.Entities.DiscussionThread", b =>

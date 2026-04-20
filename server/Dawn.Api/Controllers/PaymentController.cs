@@ -1,4 +1,5 @@
 using Dawn.Core.Entities;
+using Dawn.Core.Interfaces;
 using Dawn.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,6 +8,9 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 
 namespace Dawn.Api.Controllers;
 
@@ -18,16 +22,22 @@ public class PaymentController : ControllerBase
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly INotificationService _notificationService;
 
-    public PaymentController(ApplicationDbContext context, IConfiguration configuration, IHttpClientFactory httpClientFactory)
+    public PaymentController(
+        ApplicationDbContext context, 
+        IConfiguration configuration, 
+        IHttpClientFactory httpClientFactory,
+        INotificationService notificationService)
     {
         _context = context;
         _configuration = configuration;
         _httpClientFactory = httpClientFactory;
+        _notificationService = notificationService;
     }
 
     /// <summary>
-    /// Initiate a payment for a course. Creates a pending PaymentRecord and returns the redirect URL.
+    /// Initiate a payment for a semester tuition invoice. Creates a pending PaymentRecord and returns the redirect URL.
     /// </summary>
     [HttpPost("initiate")]
     public async Task<IActionResult> Initiate([FromBody] PaymentInitiateDto dto)
@@ -35,55 +45,27 @@ public class PaymentController : ControllerBase
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null) return Unauthorized();
 
-        var course = await _context.Courses.FindAsync(dto.CourseId);
-        if (course == null) return NotFound(new { Message = "Course not found." });
+        if (!dto.SemesterInvoiceId.HasValue)
+        {
+            return BadRequest(new { Message = "Institutional LMS mode only accepts tuition invoice payments." });
+        }
 
-        if (course.Price <= 0)
-            return BadRequest(new { Message = "This is a free course. Enroll directly." });
-
-        // Check if already enrolled
-        var alreadyEnrolled = await _context.Enrollments
-            .AnyAsync(e => e.StudentId == userId && e.CourseId == dto.CourseId);
-        if (alreadyEnrolled)
-            return BadRequest(new { Message = "You are already enrolled in this course." });
+        var invoice = await _context.SemesterInvoices.FindAsync(dto.SemesterInvoiceId.Value);
+        if (invoice == null) return NotFound(new { Message = "Invoice not found." });
+        if (invoice.IsPaid) return BadRequest(new { Message = "This invoice is already paid." });
+        if (invoice.StudentId != userId) return Unauthorized("Not your invoice.");
+        
+        decimal finalAmount = invoice.AmountNpr;
+        string itemName = invoice.Description;
 
         // Create a unique transaction UUID
         var transactionUuid = Guid.NewGuid().ToString();
-
-        // Apply coupon discount if provided
-        var finalAmount = course.Price;
-        CourseCoupon? appliedCoupon = null;
-
-        if (!string.IsNullOrWhiteSpace(dto.CouponCode))
-        {
-            appliedCoupon = await _context.CourseCoupons
-                .FirstOrDefaultAsync(c => c.Code == dto.CouponCode && c.OwnerId == userId);
-
-            if (appliedCoupon == null)
-                return BadRequest(new { Message = "Coupon not found or does not belong to you." });
-            if (appliedCoupon.IsUsed)
-                return BadRequest(new { Message = "This coupon has already been used." });
-            if (appliedCoupon.ExpiresAt < DateTime.UtcNow)
-                return BadRequest(new { Message = "This coupon has expired." });
-
-            var discount = finalAmount * appliedCoupon.DiscountPercent / 100;
-            if (appliedCoupon.MaxDiscountAmount.HasValue && discount > appliedCoupon.MaxDiscountAmount.Value)
-                discount = appliedCoupon.MaxDiscountAmount.Value;
-            
-            finalAmount -= discount;
-            if (finalAmount < 10) finalAmount = 10; // eSewa minimum is 10 Rs
-
-            // Mark coupon as used
-            appliedCoupon.IsUsed = true;
-            appliedCoupon.UsedOnCourseId = dto.CourseId;
-            appliedCoupon.UsedAt = DateTime.UtcNow;
-        }
 
         // Create pending payment record
         var payment = new PaymentRecord
         {
             StudentId = userId,
-            CourseId = dto.CourseId,
+            SemesterInvoiceId = invoice.Id,
             Amount = finalAmount,
             Gateway = dto.Gateway.ToLower(),
             TransactionId = transactionUuid,
@@ -99,11 +81,11 @@ public class PaymentController : ControllerBase
 
         if (dto.Gateway.ToLower() == "esewa")
         {
-            return Ok(GenerateEsewaPayload(payment, course, transactionUuid, frontendBase, backendBase));
+            return Ok(GenerateEsewaPayload(payment, itemName, transactionUuid, frontendBase, backendBase));
         }
         else if (dto.Gateway.ToLower() == "khalti")
         {
-            var result = await InitiateKhaltiPayment(payment, course, transactionUuid, frontendBase);
+            var result = await InitiateKhaltiPayment(payment, itemName, transactionUuid, frontendBase);
             return Ok(result);
         }
 
@@ -190,32 +172,26 @@ public class PaymentController : ControllerBase
                 return Redirect($"{frontendUrl}/payment-failed?reason=verification_failed");
             }
 
-            // Payment verified! Mark as completed and auto-enroll
             payment.Status = "Completed";
             payment.CompletedAt = DateTime.UtcNow;
 
-            // Auto-enroll the student
-            var alreadyEnrolled = await _context.Enrollments
-                .AnyAsync(e => e.StudentId == payment.StudentId && e.CourseId == payment.CourseId);
-
-            if (!alreadyEnrolled)
+            if (payment.SemesterInvoiceId.HasValue)
             {
-                _context.Enrollments.Add(new Enrollment
+                var invoice = await _context.SemesterInvoices.FindAsync(payment.SemesterInvoiceId.Value);
+                if (invoice != null)
                 {
-                    StudentId = payment.StudentId,
-                    CourseId = payment.CourseId,
-                    EnrolledAt = DateTime.UtcNow,
-                    Progress = 0
-                });
+                    invoice.IsPaid = true;
+                    invoice.PaidAt = DateTime.UtcNow;
+                    invoice.ESewaTransactionId = payment.TransactionId;
+                }
             }
 
             await _context.SaveChangesAsync();
 
-            // Award Dawn Points for the purchase
-            var purchasedCourse = await _context.Courses.FindAsync(payment.CourseId);
-            await PointsController.AwardPurchasePoints(_context, payment.StudentId, purchasedCourse?.Title ?? "Course");
+            // Generate and send PDF Invoice
+            _ = Task.Run(() => GenerateAndSendInvoiceAsync(payment));
 
-            return Redirect($"{frontendUrl}/payment-success?courseId={payment.CourseId}&gateway=esewa");
+            return Redirect($"{frontendUrl}/payment-success?invoiceId={payment.SemesterInvoiceId}&gateway=esewa");
         }
         catch (Exception)
         {
@@ -280,27 +256,23 @@ public class PaymentController : ControllerBase
             payment.CompletedAt = DateTime.UtcNow;
             payment.TransactionId = purchase_order_id; // Keep our UUID as reference
 
-            var alreadyEnrolled = await _context.Enrollments
-                .AnyAsync(e => e.StudentId == payment.StudentId && e.CourseId == payment.CourseId);
-
-            if (!alreadyEnrolled)
+            if (payment.SemesterInvoiceId.HasValue)
             {
-                _context.Enrollments.Add(new Enrollment
+                var invoice = await _context.SemesterInvoices.FindAsync(payment.SemesterInvoiceId.Value);
+                if (invoice != null)
                 {
-                    StudentId = payment.StudentId,
-                    CourseId = payment.CourseId,
-                    EnrolledAt = DateTime.UtcNow,
-                    Progress = 0
-                });
+                    invoice.IsPaid = true;
+                    invoice.PaidAt = DateTime.UtcNow;
+                    invoice.ESewaTransactionId = payment.TransactionId; // store the khalti one too
+                }
             }
 
             await _context.SaveChangesAsync();
 
-            // Award Dawn Points for the purchase
-            var purchasedCourse = await _context.Courses.FindAsync(payment.CourseId);
-            await PointsController.AwardPurchasePoints(_context, payment.StudentId, purchasedCourse?.Title ?? "Course");
+            // Generate and send PDF Invoice
+            _ = Task.Run(() => GenerateAndSendInvoiceAsync(payment));
 
-            return Redirect($"{frontendUrl}/payment-success?courseId={payment.CourseId}&gateway=khalti");
+            return Redirect($"{frontendUrl}/payment-success?invoiceId={payment.SemesterInvoiceId}&gateway=khalti");
         }
         catch (Exception)
         {
@@ -319,12 +291,12 @@ public class PaymentController : ControllerBase
 
         var payments = await _context.PaymentRecords
             .Where(p => p.StudentId == userId)
-            .Include(p => p.Course)
+            .Include(p => p.SemesterInvoice)
             .OrderByDescending(p => p.CreatedAt)
             .Select(p => new
             {
                 p.Id,
-                CourseName = p.Course.Title,
+                CourseName = p.SemesterInvoice != null ? p.SemesterInvoice.Description : "Payment",
                 p.Amount,
                 p.Gateway,
                 p.Status,
@@ -337,9 +309,122 @@ public class PaymentController : ControllerBase
         return Ok(payments);
     }
 
+    /// <summary>
+    /// Verify payment status for frontend display
+    /// </summary>
+    [HttpGet("verify")]
+    public async Task<IActionResult> VerifyPaymentStatus(
+        [FromQuery] int invoiceId, 
+        [FromQuery] string gateway)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null) return Unauthorized();
+        
+        // Validate gateway
+        if (gateway != "esewa" && gateway != "khalti")
+        {
+            return BadRequest(new { 
+                success = false, 
+                message = "Invalid gateway specified" 
+            });
+        }
+        
+        // Find the invoice
+        var invoice = await _context.SemesterInvoices
+            .Include(i => i.Student)
+            .FirstOrDefaultAsync(i => i.Id == invoiceId);
+        
+        if (invoice == null)
+        {
+            return NotFound(new { 
+                success = false, 
+                message = "Invoice not found" 
+            });
+        }
+        
+        // Verify ownership
+        if (invoice.StudentId != userId)
+        {
+            return Unauthorized(new { 
+                success = false, 
+                message = "Not authorized to view this invoice" 
+            });
+        }
+        
+        // Check if invoice is paid
+        if (!invoice.IsPaid)
+        {
+            return Ok(new { 
+                success = false, 
+                message = "Payment not completed",
+                retryable = true
+            });
+        }
+        
+        // Find the payment record
+        var payment = await _context.PaymentRecords
+            .Where(p => p.SemesterInvoiceId == invoiceId && p.Status == "Completed")
+            .OrderByDescending(p => p.CompletedAt)
+            .FirstOrDefaultAsync();
+        
+        if (payment == null)
+        {
+            return Ok(new { 
+                success = false, 
+                message = "Payment record not found",
+                retryable = false
+            });
+        }
+        
+        // Return verified payment details
+        return Ok(new
+        {
+            success = true,
+            invoiceId = invoice.Id,
+            amount = payment.Amount,
+            gateway = payment.Gateway,
+            transactionId = payment.TransactionId,
+            timestamp = payment.CompletedAt,
+            courseName = invoice.Description,
+            studentName = invoice.Student?.FullName
+        });
+    }
+
+    /// <summary>
+    /// Verify payment failure reason (optional endpoint)
+    /// </summary>
+    [HttpGet("verify-failure")]
+    public IActionResult VerifyPaymentFailure([FromQuery] string reason)
+    {
+        // Map reason codes to user-friendly messages
+        var reasonMessages = new Dictionary<string, string>
+        {
+            { "esewa_cancelled", "The eSewa payment was cancelled or not completed." },
+            { "khalti_cancelled", "The Khalti payment was cancelled or not completed." },
+            { "verification_failed", "Payment verification failed. Please contact support." },
+            { "payment_not_found", "The payment record could not be found." },
+            { "payment_incomplete", "The payment was not fully completed." },
+            { "khalti_lookup_failed", "Khalti payment verification failed." },
+            { "server_error", "An unexpected server error occurred." },
+            { "unknown", "The payment could not be processed." }
+        };
+        
+        var message = reasonMessages.ContainsKey(reason) 
+            ? reasonMessages[reason] 
+            : reasonMessages["unknown"];
+        
+        return Ok(new
+        {
+            success = false,
+            reason = reason,
+            message = message,
+            retryable = !new[] { "verification_failed", "server_error" }.Contains(reason)
+        });
+    }
+
     // ──── HELPER METHODS ────
 
-    private object GenerateEsewaPayload(PaymentRecord payment, Course course, string transactionUuid, string frontendBase, string backendBase)
+    private object GenerateEsewaPayload(PaymentRecord payment, string itemName, string transactionUuid, string frontendBase, string backendBase)
     {
         var merchantCode = _configuration["PaymentGateways:eSewa:MerchantCode"]!;
         var secretKey = _configuration["PaymentGateways:eSewa:SecretKey"]!;
@@ -370,7 +455,7 @@ public class PaymentController : ControllerBase
         };
     }
 
-    private async Task<object> InitiateKhaltiPayment(PaymentRecord payment, Course course, string transactionUuid, string frontendBase)
+    private async Task<object> InitiateKhaltiPayment(PaymentRecord payment, string itemName, string transactionUuid, string frontendBase)
     {
         var secretKey = _configuration["PaymentGateways:Khalti:SecretKey"]!;
         var khaltiBase = _configuration["PaymentGateways:Khalti:BaseUrl"]!;
@@ -387,7 +472,7 @@ public class PaymentController : ControllerBase
             website_url = frontendBase,
             amount = amountInPaisa,
             purchase_order_id = transactionUuid,
-            purchase_order_name = course.Title,
+            purchase_order_name = itemName,
             customer_info = new
             {
                 name = "Dawn Student",
@@ -429,15 +514,98 @@ public class PaymentController : ControllerBase
         var hashBytes = hmac.ComputeHash(messageBytes);
         return Convert.ToBase64String(hashBytes);
     }
+    private async Task GenerateAndSendInvoiceAsync(PaymentRecord payment)
+    {
+        try
+        {
+            var student = await _context.Users.FindAsync(payment.StudentId);
+            if (student == null || string.IsNullOrEmpty(student.Email)) return;
+            string title = "";
+            if (payment.SemesterInvoiceId.HasValue) {
+                var invoice = await _context.SemesterInvoices.FindAsync(payment.SemesterInvoiceId.Value);
+                title = invoice?.Description ?? "Semester Tuition";
+            }
+
+            var document = Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4);
+                    page.Margin(2, Unit.Centimetre);
+                    page.PageColor(Colors.White);
+                    page.DefaultTextStyle(x => x.FontSize(12));
+
+                    page.Header().Text("Dawn Platform Invoice")
+                        .SemiBold().FontSize(24).FontColor(Colors.Blue.Darken2);
+
+                    page.Content().PaddingVertical(1, Unit.Centimetre).Column(x =>
+                    {
+                        x.Spacing(20);
+
+                        x.Item().Text($"Invoice Number: {payment.TransactionId}");
+                        x.Item().Text($"Date: {payment.CompletedAt:yyyy-MM-dd HH:mm}");
+                        x.Item().Text($"Customer: {student.FullName} ({student.Email})");
+
+                        x.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(columns =>
+                            {
+                                columns.RelativeColumn();
+                                columns.ConstantColumn(100);
+                            });
+
+                            table.Header(header =>
+                            {
+                                header.Cell().Text("Course").SemiBold();
+                                header.Cell().AlignRight().Text("Price (NPR)").SemiBold();
+                            });
+
+                            table.Cell().Text(title);
+                            table.Cell().AlignRight().Text($"{payment.Amount:F2}");
+                        });
+
+                        x.Item().AlignRight().Text($"Total Paid: Rs. {payment.Amount:F2} via {payment.Gateway}")
+                            .SemiBold().FontSize(14);
+                    });
+
+                    page.Footer()
+                        .AlignCenter()
+                        .Text(x =>
+                        {
+                            x.Span("Page ");
+                            x.CurrentPageNumber();
+                            x.Span(" of ");
+                            x.TotalPages();
+                        });
+                });
+            });
+
+            byte[] pdfBytes = document.GeneratePdf();
+
+            using var scope = HttpContext.RequestServices.CreateScope();
+            var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+            
+            await emailService.SendEmailWithAttachmentAsync(
+                student.Email!,
+                $"Your Receipt for {title}",
+                $"Hi {student.FullName},\n\nThank you for your payment! Please find your receipt attached.\n\nBest,\nDawn Platform Team",
+                $"Receipt_{payment.TransactionId}.pdf",
+                pdfBytes
+            );
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to generate invoice: {ex.Message}");
+        }
+    }
 }
 
 // ──── DTOs ────
 
 public class PaymentInitiateDto
 {
-    public int CourseId { get; set; }
+    public int? SemesterInvoiceId { get; set; }
     public string Gateway { get; set; } = string.Empty;
-    public string? CouponCode { get; set; }
     public string? FrontendBaseUrl { get; set; }
     public string? BackendBaseUrl { get; set; }
 }

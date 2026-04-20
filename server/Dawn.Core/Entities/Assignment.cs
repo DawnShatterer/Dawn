@@ -1,4 +1,4 @@
-﻿using Dawn.Core.Common;
+using Dawn.Core.Common;
 
 namespace Dawn.Core.Entities;
 
@@ -11,4 +11,6 @@ public class Assignment : BaseEntity
     // Relationship to Course
     public int CourseId { get; set; }
     public Course Course { get; set; } = null!;
+
+    public ICollection<AssignmentSubmission> Submissions { get; set; } = new List<AssignmentSubmission>();
 }

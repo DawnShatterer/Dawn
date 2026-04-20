@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Container, Row, Col, Card, Form, Button, Badge, Spinner, InputGroup, ListGroup } from 'react-bootstrap';
-import { Send, Search, MessageCircle, User, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Spinner } from 'react-bootstrap';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as signalR from '@microsoft/signalr';
 import { getConversations, getHistory, markMessagesRead, searchUsers } from '../api/messageService';
@@ -37,8 +37,8 @@ const Messages = () => {
             .build();
 
         newConnection.start()
-            .then(() => console.log('SignalR Connected'))
-            .catch(err => console.error('SignalR Error:', err));
+            .then(() => {})
+            .catch(err => {});
 
         setConnection(newConnection);
         return () => newConnection.stop();
@@ -78,7 +78,6 @@ const Messages = () => {
             queryClient.invalidateQueries({ queryKey: ['conversations'] });
             queryClient.invalidateQueries({ queryKey: ['unread-messages'] });
         } catch (err) {
-            console.error('Failed to load history:', err);
         }
 
         setTimeout(() => inputRef.current?.focus(), 100);
@@ -92,7 +91,6 @@ const Messages = () => {
             await connection.invoke('SendMessage', selectedUser.userId, messageInput.trim());
             setMessageInput('');
         } catch (err) {
-            console.error('Send failed:', err);
         }
     };
 
@@ -107,7 +105,6 @@ const Messages = () => {
                 const results = await searchUsers(searchQuery);
                 setSearchResults(results);
             } catch (err) {
-                console.error('Search failed:', err);
             }
         }, 300);
 
@@ -122,227 +119,177 @@ const Messages = () => {
         return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
     };
 
-    const getRoleBadge = (role) => {
-        const colors = { Teacher: 'primary', Student: 'success', Admin: 'danger' };
-        return <Badge bg={colors[role] || 'secondary'} className="ms-2" style={{ fontSize: '0.65rem' }}>{role}</Badge>;
+    const getRoleBadgeStyle = (role) => {
+        if (role === 'Teacher') return { background: 'rgba(59,130,246,0.08)', color: '#3b82f6' };
+        if (role === 'Admin') return { background: 'rgba(220,38,38,0.08)', color: '#dc2626' };
+        return { background: 'rgba(52,130,82,0.08)', color: '#348252' };
     };
 
     return (
-        <Container fluid className="py-4 h-100 font-sans">
-            <Row className="justify-content-center h-100">
-                <Col xl={10} className="h-100">
-                    <Card className="border-0 shadow-sm rounded-4 h-100 overflow-hidden bg-body">
-                        <Row className="g-0 h-100">
-                            
-                            {/* Left Sidebar */}
-                            <Col md={4} className={`h-100 d-flex flex-column border-end border-opacity-50 ${selectedUser ? 'd-none d-md-flex' : ''}`}>
-                                <div className="p-4 border-bottom border-opacity-50 bg-body-tertiary">
-                                    <h4 className="fw-bolder mb-3 d-flex align-items-center text-body">
-                                        <MessageCircle size={24} className="text-primary me-2" /> Direct Messages
-                                    </h4>
-                                    <InputGroup>
-                                        <InputGroup.Text className="bg-body border-end-0">
-                                            <Search size={16} className="text-muted" />
-                                        </InputGroup.Text>
-                                        <Form.Control
-                                            placeholder="Find someone to chat..."
-                                            className="bg-body border-start-0 shadow-none text-body"
-                                            value={searchQuery}
-                                            onChange={(e) => { setSearchQuery(e.target.value); setIsSearching(true); }}
-                                            onFocus={() => setIsSearching(true)}
-                                            style={{ fontSize: '0.95rem' }}
-                                        />
-                                    </InputGroup>
-                                </div>
+        <div className="msg-wrapper">
+            <div className="msg-container">
 
-                                <div className="flex-grow-1 overflow-auto bg-body">
-                                    {isSearching && searchResults.length > 0 && (
-                                        <div className="p-3">
-                                            <small className="text-muted fw-bold px-2 text-uppercase mb-2 d-block" style={{letterSpacing: '1px', fontSize: '0.7rem'}}>Found Users</small>
-                                            <ListGroup variant="flush">
-                                                {searchResults.map(u => (
-                                                    <ListGroup.Item
-                                                        key={u.userId} action
-                                                        className="d-flex align-items-center px-3 py-3 border-0 rounded-3 mb-1 bg-body hover-bg-tertiary transition-all"
-                                                        onClick={() => selectConversation(u)}
-                                                    >
-                                                        <div className="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-3 shadow-sm" style={{width: '42px', height: '42px'}}>
-                                                            <span className="fw-bold fs-5">{u.fullName.charAt(0).toUpperCase()}</span>
-                                                        </div>
-                                                        <div className="flex-grow-1 min-w-0">
-                                                            <div className="d-flex align-items-center">
-                                                                <span className="fw-bold text-truncate text-body">{u.fullName}</span>
-                                                                {getRoleBadge(u.role)}
-                                                            </div>
-                                                            <small className="text-muted text-truncate d-block">{u.email}</small>
-                                                        </div>
-                                                    </ListGroup.Item>
-                                                ))}
-                                            </ListGroup>
+                {/* ── Sidebar ── */}
+                <div className={`msg-sidebar ${selectedUser ? 'd-none d-md-flex' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div className="msg-sidebar-header">
+                        <h4>
+                            <i className="bi bi-chat-dots" style={{ fontSize: '18px', color: '#348252' }}></i>
+                            Direct Messages
+                        </h4>
+                        <div style={{ position: 'relative' }}>
+                            <i className="bi bi-search" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', opacity: 0.35, fontSize: '14px' }}></i>
+                            <input
+                                className="msg-search-input"
+                                placeholder="Find someone to chat..."
+                                value={searchQuery}
+                                onChange={(e) => { setSearchQuery(e.target.value); setIsSearching(true); }}
+                                onFocus={() => setIsSearching(true)}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="msg-contact-list">
+                        {/* Search results */}
+                        {isSearching && searchResults.length > 0 && (
+                            <div style={{ padding: '0.5rem' }}>
+                                <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.35, marginBottom: '0.5rem', paddingLeft: '0.5rem' }}>Found Users</div>
+                                {searchResults.map(u => (
+                                    <div key={u.userId} className="msg-contact" onClick={() => selectConversation(u)}>
+                                        <div className="msg-avatar">{u.fullName.charAt(0).toUpperCase()}</div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                                <span className="msg-contact-name">{u.fullName}</span>
+                                                <span className="rc-badge" style={getRoleBadgeStyle(u.role)}>{u.role}</span>
+                                            </div>
+                                            <div className="msg-contact-preview">{u.email}</div>
                                         </div>
-                                    )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
 
-                                    {!isSearching && (
-                                        <ListGroup variant="flush" className="p-2">
-                                            {isLoading ? (
-                                                <div className="text-center p-5"><Spinner animation="border" variant="primary" /></div>
-                                            ) : conversations?.length === 0 ? (
-                                                <div className="text-center p-5 mt-4">
-                                                    <div className="bg-body-tertiary rounded-circle p-4 d-inline-block mb-3">
-                                                        <MessageCircle size={32} className="text-muted" />
-                                                    </div>
-                                                    <h6 className="fw-bold text-body">No Active Chats</h6>
-                                                    <p className="text-muted small">Use the search bar above to start a new conversation.</p>
-                                                </div>
-                                            ) : (
-                                                conversations?.map(c => {
-                                                    const isActive = selectedUser?.userId === c.userId;
-                                                    return (
-                                                        <ListGroup.Item
-                                                            key={c.userId} action
-                                                            active={isActive}
-                                                            className={`d-flex align-items-center px-3 py-3 mb-2 rounded-3 border-0 transition-all ${isActive ? 'bg-primary text-white shadow' : 'bg-body hover-bg-tertiary'}`}
-                                                            onClick={() => selectConversation(c)}
-                                                        >
-                                                            <div className={`rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-3 shadow-sm ${isActive ? 'bg-body bg-opacity-25 text-white' : 'bg-primary bg-opacity-10 text-primary'}`} style={{width: '48px', height: '48px'}}>
-                                                                <span className="fw-bold fs-5">{c.fullName.charAt(0).toUpperCase()}</span>
-                                                            </div>
-                                                            <div className="flex-grow-1 min-w-0">
-                                                                <div className="d-flex justify-content-between align-items-center mb-1">
-                                                                    <span className={`fw-bold text-truncate ${isActive ? 'text-white' : 'text-body'}`}>{c.fullName}</span>
-                                                                    <small className={`flex-shrink-0 ms-2 ${isActive ? 'text-white-50' : 'text-muted'}`} style={{fontSize: '0.75rem'}}>{formatTime(c.lastMessageTime)}</small>
-                                                                </div>
-                                                                <div className="d-flex justify-content-between align-items-center">
-                                                                    <small className={`text-truncate ${isActive ? 'text-white-50' : 'text-muted'}`}>{c.lastMessage}</small>
-                                                                    {c.unreadCount > 0 && !isActive && (
-                                                                        <Badge pill bg="danger" className="ms-2 shadow-sm">{c.unreadCount}</Badge>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </ListGroup.Item>
-                                                    );
-                                                })
-                                            )}
-                                        </ListGroup>
-                                    )}
-                                </div>
-                            </Col>
-
-                            {/* Right active chat container */}
-                            <Col md={8} className={`h-100 d-flex flex-column bg-body-tertiary ${!selectedUser ? 'd-none d-md-flex' : ''}`}>
-                                {!selectedUser ? (
-                                    <div className="flex-grow-1 d-flex flex-column align-items-center justify-content-center text-center p-5">
-                                        <div className="bg-body shadow-sm rounded-circle p-4 mb-4" style={{width: '100px', height: '100px'}}>
-                                            <img src="/logo.png" alt="Dawn" style={{width: '100%', opacity: '0.1', filter: 'grayscale(100%)'}} />
-                                        </div>
-                                        <h4 className="fw-bolder text-body">Dawn Messenger</h4>
-                                        <p className="text-muted Lead mx-auto" style={{maxWidth: '300px'}}>
-                                            Select a conversation from the sidebar or start a new seamless chat.
-                                        </p>
+                        {/* Conversations list */}
+                        {!isSearching && (
+                            <>
+                                {isLoading ? (
+                                    <div style={{ textAlign: 'center', padding: '2.5rem', opacity: 0.3 }}>
+                                        <Spinner animation="border" size="sm" />
+                                    </div>
+                                ) : conversations?.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+                                        <i className="bi bi-chat-dots" style={{ fontSize: '28px', opacity: 0.15, marginBottom: '0.5rem' }}></i>
+                                        <h6 style={{ fontWeight: 700, fontSize: '0.85rem' }}>No Active Chats</h6>
+                                        <p style={{ fontSize: '0.72rem', opacity: 0.4 }}>Use the search bar above to start a new conversation.</p>
                                     </div>
                                 ) : (
-                                    <>
-                                        {/* Chat Dashboard Header */}
-                                        <div className="bg-body p-3 px-4 border-bottom border-opacity-50 d-flex align-items-center shadow-sm z-1">
-                                            <Button variant="link" className="text-body d-md-none p-0 me-3" onClick={() => setSelectedUser(null)}>
-                                                <ArrowLeft size={24} />
-                                            </Button>
-                                            <div className="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-3 shadow-sm" style={{width: '42px', height: '42px'}}>
-                                                <span className="fw-bold fs-5">{selectedUser.fullName.charAt(0).toUpperCase()}</span>
-                                            </div>
-                                            <div>
-                                                <h5 className="m-0 fw-bold text-body">{selectedUser.fullName}</h5>
-                                                <div className="d-flex align-items-center">
-                                                    <span className="bg-success rounded-circle d-inline-block me-1" style={{width: '8px', height: '8px'}}></span>
-                                                    <small className="text-muted fw-medium">Active now</small>
-                                                    <span className="mx-2 text-muted opacity-50">•</span>
-                                                    {getRoleBadge(selectedUser.role)}
+                                    conversations?.map(c => {
+                                        const isActive = selectedUser?.userId === c.userId;
+                                        return (
+                                            <div key={c.userId} className={`msg-contact ${isActive ? 'active' : ''}`} onClick={() => selectConversation(c)}>
+                                                <div className="msg-avatar">{c.fullName.charAt(0).toUpperCase()}</div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <span className="msg-contact-name">{c.fullName}</span>
+                                                        <span className="msg-contact-time">{formatTime(c.lastMessageTime)}</span>
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <span className="msg-contact-preview">{c.lastMessage}</span>
+                                                        {c.unreadCount > 0 && !isActive && (
+                                                            <span className="msg-unread-badge">{c.unreadCount}</span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-
-                                        {/* Seamless Chat Messages UI */}
-                                        <div className="flex-grow-1 p-4 overflow-auto px-md-5" style={{ scrollBehavior: 'smooth' }}>
-                                            {chatMessages.length === 0 ? (
-                                                <div className="text-center mt-5">
-                                                    <Badge bg="primary" className="bg-opacity-10 text-primary px-3 py-2 rounded-pill fw-medium border border-primary border-opacity-25">
-                                                        This is the beginning of your chat history.
-                                                    </Badge>
-                                                </div>
-                                            ) : (
-                                                chatMessages.map((msg, idx) => {
-                                                    const isMine = msg.senderId === user?.id;
-                                                    return (
-                                                        <div key={msg.id || idx} className={`d-flex mb-4 ${isMine ? 'justify-content-end' : 'justify-content-start'}`}>
-                                                            {!isMine && (
-                                                                <div className="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-2 align-self-end shadow-sm" style={{width: '28px', height: '28px', fontSize: '0.75rem'}}>
-                                                                    <span className="fw-bold">{selectedUser.fullName.charAt(0).toUpperCase()}</span>
-                                                                </div>
-                                                            )}
-                                                            <div className={`d-flex flex-column ${isMine ? 'align-items-end' : 'align-items-start'}`} style={{maxWidth: '75%'}}>
-                                                                <div
-                                                                    className={`px-4 py-2 shadow-sm ${isMine ? 'text-white' : 'bg-body text-body border'}`}
-                                                                    style={{
-                                                                        borderRadius: isMine ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
-                                                                        fontSize: '0.95rem',
-                                                                        lineHeight: '1.5',
-                                                                        background: isMine ? 'linear-gradient(135deg, #0d6efd, #6610f2)' : undefined
-                                                                    }}
-                                                                >
-                                                                    {msg.content}
-                                                                </div>
-                                                                <div className="d-flex align-items-center mt-1" style={{ opacity: 0.7 }}>
-                                                                    <small className="text-muted fw-medium" style={{ fontSize: '0.7rem' }}>
-                                                                        {formatTime(msg.createdAt)}
-                                                                    </small>
-                                                                    {isMine && <CheckCircle2 size={12} className={`ms-1 ${msg.isRead ? 'text-success' : 'text-muted'}`} />}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })
-                                            )}
-                                            <div ref={messagesEndRef} />
-                                        </div>
-
-                                        {/* Premium Message Input Box */}
-                                        <div className="bg-body p-3 px-md-4 border-top border-opacity-50">
-                                            <Form onSubmit={handleSend} className="position-relative">
-                                                <Form.Control
-                                                    ref={inputRef}
-                                                    type="text"
-                                                    placeholder="Write your message here..."
-                                                    value={messageInput}
-                                                    onChange={(e) => setMessageInput(e.target.value)}
-                                                    className="rounded-4 border-light bg-body-tertiary shadow-none py-3 px-4 text-body pe-5"
-                                                    style={{ fontSize: '0.95rem', transition: 'all 0.2s', border: '1px solid transparent' }}
-                                                    onFocus={(e) => e.target.style.borderColor = '#0d6efd'}
-                                                    onBlur={(e) => e.target.style.borderColor = 'transparent'}
-                                                />
-                                                <Button
-                                                    type="submit"
-                                                    className="position-absolute end-0 top-50 translate-middle-y rounded-circle p-0 d-flex align-items-center justify-content-center border-0 shadow-sm me-2 btn-hover-scale"
-                                                    style={{ width: '40px', height: '40px', background: messageInput.trim() ? 'linear-gradient(135deg, #0d6efd, #6610f2)' : '#e9ecef', transition: '0.3s' }}
-                                                    disabled={!messageInput.trim()}
-                                                >
-                                                    <Send size={16} className={messageInput.trim() ? 'text-white ms-1' : 'text-muted ms-1'} />
-                                                </Button>
-                                            </Form>
-                                        </div>
-                                    </>
+                                        );
+                                    })
                                 )}
-                            </Col>
-                        </Row>
-                    </Card>
-                </Col>
-            </Row>
+                            </>
+                        )}
+                    </div>
+                </div>
 
-            <style>{`
-                .hover-bg-tertiary:hover { background-color: var(--bs-secondary-bg) !important; }
-                .transition-all { transition: all 0.2s ease-in-out; }
-                .btn-hover-scale:hover { transform: translateY(-50%) scale(1.05) !important; }
-            `}</style>
-        </Container>
+                {/* ── Chat Area ── */}
+                <div className={`msg-chat-area ${!selectedUser ? 'd-none d-md-flex' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
+                    {!selectedUser ? (
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '2rem' }}>
+                            <i className="bi bi-chat-dots" style={{ fontSize: '40px', opacity: 0.08, marginBottom: '1rem' }}></i>
+                            <h5 style={{ fontWeight: 700, fontSize: '1.1rem' }}>Dawn Messenger</h5>
+                            <p style={{ fontSize: '0.82rem', opacity: 0.4, maxWidth: '280px' }}>
+                                Select a conversation from the sidebar or start a new chat.
+                            </p>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Chat Header */}
+                            <div className="msg-chat-header">
+                                <button onClick={() => setSelectedUser(null)} className="d-md-none" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', marginRight: '0.25rem' }}>
+                                    <i className="bi bi-arrow-left" style={{ fontSize: '20px' }}></i>
+                                </button>
+                                <div className="msg-avatar" style={{ width: '36px', height: '36px', fontSize: '0.85rem', background: 'rgba(52,130,82,0.1)', color: '#348252', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0 }}>
+                                    {selectedUser.fullName.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <div className="msg-chat-name">{selectedUser.fullName}</div>
+                                    <div className="msg-chat-status">
+                                        <span className="msg-online-dot"></span>
+                                        Active now
+                                        {selectedUser.role && (
+                                            <span className="rc-badge" style={{ ...getRoleBadgeStyle(selectedUser.role), marginLeft: '0.35rem' }}>{selectedUser.role}</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Messages */}
+                            <div className="msg-messages">
+                                {chatMessages.length === 0 ? (
+                                    <div style={{ textAlign: 'center', paddingTop: '3rem' }}>
+                                        <span className="rc-badge" style={{ background: 'rgba(52,130,82,0.08)', color: '#348252', padding: '0.3rem 0.8rem' }}>
+                                            This is the beginning of your chat history.
+                                        </span>
+                                    </div>
+                                ) : (
+                                    chatMessages.map((msg, idx) => {
+                                        const isMine = msg.senderId === user?.id;
+                                        return (
+                                            <div key={msg.id || idx} className={`msg-bubble-row ${isMine ? 'mine' : 'theirs'}`}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: isMine ? 'flex-end' : 'flex-start' }}>
+                                                    <div className={`msg-bubble ${isMine ? 'mine' : 'theirs'}`}>
+                                                        {msg.content}
+                                                    </div>
+                                                    <div className={`msg-bubble-meta ${isMine ? '' : ''}`}>
+                                                        {formatTime(msg.createdAt)}
+                                                        {isMine && <i className="bi bi-check-circle" style={{ fontSize: '10px', color: msg.isRead ? '#348252' : undefined }}></i>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                                <div ref={messagesEndRef} />
+                            </div>
+
+                            {/* Input */}
+                            <div className="msg-input-area">
+                                <form onSubmit={handleSend} className="msg-input-form">
+                                    <input
+                                        ref={inputRef}
+                                        type="text"
+                                        className="msg-text-input"
+                                        placeholder="Write your message here..."
+                                        value={messageInput}
+                                        onChange={(e) => setMessageInput(e.target.value)}
+                                    />
+                                    <button type="submit" className={`msg-send-btn ${messageInput.trim() ? 'active' : 'inactive'}`} disabled={!messageInput.trim()}>
+                                        <i className="bi bi-send" style={{ fontSize: '16px', marginLeft: '1px' }}></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
     );
 };
 

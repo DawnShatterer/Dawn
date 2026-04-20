@@ -1,13 +1,18 @@
 import React from 'react';
 import { Container, Row, Col, Card } from 'react-bootstrap';
-import { Target, Users, Code, Coffee, Globe } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PublicNavbar from '../components/PublicNavbar';
 import ParticleCanvas from '../components/ParticleCanvas';
+import { Helmet } from 'react-helmet-async';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 
 const AboutUs = () => {
     return (
         <div className="bg-body-tertiary min-vh-100 font-sans position-relative overflow-hidden">
+            <Helmet>
+                <title>About Us | Dawn Platform</title>
+                <meta name="description" content="Learn more about Dawn Platform's mission to democratize premium education." />
+            </Helmet>
             <div className="position-absolute top-0 start-50 translate-middle-x w-100 h-100" style={{
                 background: 'radial-gradient(circle at 50% 0%, rgba(13,110,253,0.08) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(13,202,240,0.05) 0%, transparent 40%)',
                 zIndex: 0, pointerEvents: 'none'
@@ -20,7 +25,7 @@ const AboutUs = () => {
                 <div className="text-center mb-5 pb-3">
                     <h1 className="fw-bolder display-5 text-body tracking-tight mt-4">About Dawn</h1>
                     <p className="lead text-muted mx-auto" style={{ maxWidth: '700px' }}>
-                        We are on a mission to democratize premium education, breaking down geographical borders through advanced technology, AI, and beautifully designed user experiences.
+                        We are on a mission to democratize premium education, breaking down geographical borders through advanced technology, expert-led coaching, and beautifully designed user experiences.
                     </p>
                 </div>
 
@@ -28,7 +33,7 @@ const AboutUs = () => {
                     <Col lg={4}>
                         <Card className="border-0 shadow-sm rounded-4 h-100 text-center hover-scale transition-all">
                             <Card.Body className="p-5">
-                                <Target size={40} className="text-primary mb-4" />
+                                <i className="bi bi-bullseye text-primary mb-4" style={{ fontSize: '40px' }}></i>
                                 <h4 className="fw-bold mb-3">Our Mission</h4>
                                 <p className="text-muted small mb-0">
                                     To provide a unified platform where anyone, anywhere can learn from top-tier instructors without the friction of outdated university systems.
@@ -39,10 +44,10 @@ const AboutUs = () => {
                     <Col lg={4}>
                         <Card className="border-0 shadow-sm rounded-4 h-100 text-center hover-scale transition-all">
                             <Card.Body className="p-5">
-                                <Code size={40} className="text-success mb-4" />
-                                <h4 className="fw-bold mb-3">Our Engineering</h4>
+                                <i className="bi bi-code-slash text-success mb-4" style={{ fontSize: '40px' }}></i>
+                                <h4 className="fw-bold mb-3">Expert-Led Learning</h4>
                                 <p className="text-muted small mb-0">
-                                    Built using cutting-edge .NET 9 and highly responsive React logic, the platform ensures rapid rendering, seamless state handling, and 100% uptime.
+                                    Our curriculum is designed by elite educators and industry practitioners to ensure every module translates directly into real-world career growth.
                                 </p>
                             </Card.Body>
                         </Card>
@@ -50,10 +55,10 @@ const AboutUs = () => {
                     <Col lg={4}>
                         <Card className="border-0 shadow-sm rounded-4 h-100 text-center hover-scale transition-all">
                             <Card.Body className="p-5">
-                                <Globe size={40} className="text-info mb-4" />
-                                <h4 className="fw-bold mb-3">Our Vision</h4>
+                                <i className="bi bi-globe text-info mb-4" style={{ fontSize: '40px' }}></i>
+                                <h4 className="fw-bold mb-3">Global Accessibility</h4>
                                 <p className="text-muted small mb-0">
-                                    We see a future where high-quality education is not gated by income, but accessible to any internet-connected device instantaneously.
+                                    We see a future where high-quality education is not gated by income or location, but accessible to any internet-connected device instantaneously.
                                 </p>
                             </Card.Body>
                         </Card>
@@ -62,7 +67,7 @@ const AboutUs = () => {
 
                 <Card className="border-0 shadow-sm rounded-4 overflow-hidden mb-5 bg-primary text-white position-relative">
                     <div className="position-absolute end-0 bottom-0 opacity-10 p-5">
-                        <Users size={160} />
+                        <i className="bi bi-people" style={{ fontSize: '160px' }}></i>
                     </div>
                     <Row className="g-0 align-items-center position-relative z-1">
                         <Col lg={7} className="p-5">
@@ -72,7 +77,7 @@ const AboutUs = () => {
                             </p>
                             <div className="d-flex align-items-center">
                                 <div className="bg-white bg-opacity-25 p-3 rounded-circle me-3">
-                                    <Coffee size={24} />
+                                    <i className="bi bi-cup-hot" style={{ fontSize: '24px' }}></i>
                                 </div>
                                 <div>
                                     <h6 className="fw-bold mb-0">Fueled by purpose</h6>

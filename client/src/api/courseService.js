@@ -4,9 +4,10 @@ import api from './axios';
  * Fetches all courses from the database.
  * Accessible by: Students, Teachers, Admins
  */
-export const getCourses = async (page = 1, limit = 10, search = "") => {
+export const getCourses = async (page = 1, limit = 10, search = "", category = "") => {
     const params = new URLSearchParams({ page, limit });
     if (search) params.append('search', search);
+    if (category && category !== "All") params.append('category', category);
     const response = await api.get(`/Courses?${params.toString()}`);
     return response.data;
 };
@@ -41,12 +42,22 @@ export const updateCourse = async (id, formData) => {
 };
 
 /**
- * Deletes a specific course by ID.
+ * Archives a specific course by ID (soft delete).
  * Accessible by: Teachers (Owner), Admins
- * @param {number} id - The ID of the course to delete
+ * @param {number} id - The ID of the course to archive
  */
 export const deleteCourse = async (id) => {
     const response = await api.delete(`/Courses/${id}`);
+    return response.data;
+};
+
+/**
+ * Permanently deletes a specific course by ID.
+ * Accessible by: Admin, Staff only
+ * @param {number} id - The ID of the course to permanently delete
+ */
+export const permanentlyDeleteCourse = async (id) => {
+    const response = await api.delete(`/Courses/${id}/permanent`);
     return response.data;
 };
 

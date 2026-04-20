@@ -9,5 +9,8 @@ public class LessonDto
     public string? PdfUrl { get; set; }
     public string? PptUrl { get; set; }
     public int Order { get; set; }
+    public int CompletionWeight { get; set; }
     public int CourseId { get; set; }
+    public bool IsLocked { get; set; } = false;
+    public bool IsFreePreview { get; set; } = false;
 }

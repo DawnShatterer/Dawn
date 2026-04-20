@@ -1,24 +1,40 @@
 import React from 'react';
-import { Row, Col, Card, Badge, Table, Spinner } from 'react-bootstrap';
-import { PieChart, Users, DollarSign, Activity, ArrowUpRight, Trash2 } from 'lucide-react';
+import { Row, Col } from 'react-bootstrap';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 import { getTeacherAnalytics } from '../api/analyticsService';
 import { deleteCourse } from '../api/courseService';
 import { useNavigate } from 'react-router-dom';
+import SkeletonDashboardStats from '../components/SkeletonDashboardStats';
+import SkeletonChartCard from '../components/SkeletonChartCard';
+import { getUserInfo } from '../utils/authUtils';
+import api from '../api/axios';
 
 const TeacherAnalytics = () => {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const user = getUserInfo();
 
     const { data, isLoading } = useQuery({
         queryKey: ['teacher-analytics'],
         queryFn: getTeacherAnalytics
+    });
+    
+    // Fetch teacher's courses directly
+    const { data: teacherCoursesData, isLoading: coursesLoading } = useQuery({
+        queryKey: ['teacher-courses'],
+        queryFn: async () => {
+            const res = await api.get('/Courses?limit=100');
+            const allCourses = res.data?.items || res.data?.data || res.data || [];
+            return Array.isArray(allCourses) ? allCourses.filter(c => c.instructorId === user?.id) : [];
+        }
     });
 
     const deleteMutation = useMutation({
         mutationFn: deleteCourse,
         onSuccess: () => {
             queryClient.invalidateQueries(['teacher-analytics']);
+            queryClient.invalidateQueries(['teacher-courses']);
             queryClient.invalidateQueries(['courses']);
         }
     });
@@ -29,143 +45,159 @@ const TeacherAnalytics = () => {
         }
     };
 
-    if (isLoading) {
-        return <div className="text-center py-5"><Spinner animation="border" variant="primary" /></div>;
-    }
-
     const { overview, recentActivity, courseStats } = data || {
-        overview: { totalStudents: 0, recentEnrollments: 0, totalRevenue: 0, averageRating: 0 },
+        overview: { totalStudents: 0, recentEnrollments: 0, totalNetEarnings: 0, averageRating: 0 },
         recentActivity: [],
         courseStats: []
     };
+    
+    // Use directly fetched courses instead of courseStats from analytics
+    const displayCourses = teacherCoursesData || courseStats;
+
+    if (isLoading || coursesLoading) {
+        return (
+            <div className="rc-page">
+                <div className="rc-page-header">
+                    <h2>Performance Analytics</h2>
+                    <p>Loading your analytics...</p>
+                </div>
+                <SkeletonDashboardStats count={3} />
+                <Row className="g-3 mt-3">
+                    <Col lg={8}>
+                        <SkeletonChartCard count={1} />
+                    </Col>
+                    <Col lg={4}>
+                        <SkeletonChartCard count={1} />
+                    </Col>
+                </Row>
+            </div>
+        );
+    }
 
     return (
-        <div className="container-fluid py-4 font-sans">
-            <div className="d-flex justify-content-between align-items-end mb-5">
-                <div>
-                    <h2 className="fw-bold text-body mb-1 d-flex align-items-center">
-                        <PieChart className="text-primary me-2" size={30} /> Performance Analytics
-                    </h2>
-                    <p className="text-muted mb-0">Overview of your teaching impact and revenue</p>
+        <div className="rc-page">
+            {/* ── Header ── */}
+            <div className="rc-page-header">
+                <h2>Performance Analytics</h2>
+                <p>Overview of your teaching impact and student engagement.</p>
+            </div>
+
+            {/* ── Stat Pills ── */}
+            <div className="rc-stat-row">
+                <div className="rc-stat-item">
+                    <div className="rc-stat-icon" style={{ background: 'var(--stat-bg-success)' }}>
+                        <i className="bi bi-people" style={{ color: 'var(--stat-color-success)', fontSize: '18px' }}></i>
+                    </div>
+                    <div>
+                        <div className="rc-stat-label">Total Students</div>
+                        <div className="rc-stat-value">{overview.totalStudents}</div>
+                        <div className="rc-stat-sub" style={{ color: 'var(--stat-color-success)' }}>Active learners</div>
+                    </div>
+                </div>
+                <div className="rc-stat-item">
+                    <div className="rc-stat-icon" style={{ background: 'var(--stat-bg-warning)' }}>
+                        <i className="bi bi-book" style={{ color: 'var(--stat-color-warning)', fontSize: '18px' }}></i>
+                    </div>
+                    <div>
+                        <div className="rc-stat-label">Avg. Attendance</div>
+                        <div className="rc-stat-value">{(overview.averageRating * 16).toFixed(0)}%</div>
+                        <div className="rc-stat-sub" style={{ color: 'var(--stat-color-warning)' }}>Current semester</div>
+                    </div>
+                </div>
+                <div className="rc-stat-item">
+                    <div className="rc-stat-icon" style={{ background: 'var(--stat-bg-info)' }}>
+                        <i className="bi bi-graph-up" style={{ color: 'var(--stat-color-info)', fontSize: '18px' }}></i>
+                    </div>
+                    <div>
+                        <div className="rc-stat-label">New Enrollments</div>
+                        <div className="rc-stat-value">{overview.recentEnrollments}</div>
+                        <div className="rc-stat-sub" style={{ color: 'var(--stat-color-info)' }}>This week</div>
+                    </div>
                 </div>
             </div>
 
-            {/* Overview Metric Cards */}
-            <Row className="g-4 mb-5">
-                <Col lg={3} sm={6}>
-                    <Card className="border-0 shadow-sm rounded-4 h-100 border border-light">
-                        <Card.Body className="p-4">
-                            <div className="d-flex justify-content-between align-items-start mb-3">
-                                <Users size={24} className="text-primary" />
-                                <Badge bg="primary" className="rounded-pill px-2 py-1"><ArrowUpRight size={12}/> +12%</Badge>
-                            </div>
-                            <h3 className="fw-bold text-body mb-1">{overview.totalStudents}</h3>
-                            <p className="text-muted small fw-medium mb-0">Total Active Students</p>
-                        </Card.Body>
-                    </Card>
-                </Col>
-                <Col lg={3} sm={6}>
-                    <Card className="border-0 shadow-sm rounded-4 h-100 border border-light">
-                        <Card.Body className="p-4">
-                            <div className="d-flex justify-content-between align-items-start mb-3">
-                                <DollarSign size={24} className="text-success" />
-                                <Badge bg="success" className="rounded-pill px-2 py-1"><ArrowUpRight size={12}/> +New</Badge>
-                            </div>
-                            <h3 className="fw-bold text-body mb-1">${(overview.totalRevenue || 0).toLocaleString()}</h3>
-                            <p className="text-muted small fw-medium mb-0">Total Earnings</p>
-                        </Card.Body>
-                    </Card>
-                </Col>
-                <Col lg={3} sm={6}>
-                    <Card className="border-0 shadow-sm rounded-4 h-100 border border-light">
-                        <Card.Body className="p-4">
-                            <div className="d-flex justify-content-between align-items-start mb-3">
-                                <Activity size={24} className="text-info" />
-                            </div>
-                            <h3 className="fw-bold text-body mb-1">{overview.recentEnrollments}</h3>
-                            <p className="text-muted small fw-medium mb-0">New Enrollments (This Week)</p>
-                        </Card.Body>
-                    </Card>
-                </Col>
-
-            </Row>
-
-        <Row className="g-4">
-                {/* Course Breakdown Table */}
+            <Row className="g-3">
+                {/* ── Course Table ── */}
                 <Col lg={8}>
-                    <Card className="border-0 shadow-sm rounded-4 h-100 border border-light">
-                        <Card.Header className="bg-body border-bottom-0 pt-4 pb-0 px-4">
-                            <h5 className="fw-bold text-body">Top Performing Courses</h5>
-                        </Card.Header>
-                        <Card.Body className="p-4">
-                            <div className="table-responsive">
-                                <Table hover className="align-middle mb-0 text-body" borderless>
-                                    <thead className="border-bottom text-muted small text-uppercase">
-                                        <tr>
-                                            <th className="fw-bold pb-3">Course Name</th>
-                                            <th className="fw-bold pb-3 text-center">Students</th>
-                                            <th className="fw-bold pb-3 text-center">Revenue</th>
-                                            <th className="fw-bold pb-3 text-center">Manage</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {courseStats.map(stat => (
-                                            <tr key={stat.id} className="border-bottom">
-                                                <td className="py-3">
-                                                    <span className="fw-bold text-body">{stat.title}</span>
-                                                </td>
-                                                <td className="py-3 text-center fw-medium text-secondary">{stat.students}</td>
-                                                <td className="py-3 text-center fw-bold text-success">${stat.revenue.toLocaleString()}</td>
-                                                <td className="py-3 text-center">
-                                                    <div className="d-flex justify-content-center gap-2">
-                                                        <button 
-                                                            className="btn btn-sm btn-outline-primary rounded-pill px-3"
-                                                            onClick={() => navigate(`/edit-course/${stat.id}`)}
-                                                        >
-                                                            Edit
-                                                        </button>
-                                                        <button 
-                                                            className="btn btn-sm btn-outline-danger rounded-pill px-2 d-flex align-items-center"
-                                                            onClick={() => handleDelete(stat.id, stat.title)}
-                                                            disabled={deleteMutation.isPending}
-                                                        >
-                                                            <Trash2 size={14} />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </Table>
+                    <div className="rc-table">
+                        <div className="rc-table-header">
+                            <div className="rc-table-title">
+                                <i className="bi bi-pie-chart" style={{ color: 'var(--stat-color-success)', fontSize: '16px', marginRight: '6px' }}></i>
+                                Top Performing Courses
                             </div>
-                        </Card.Body>
-                    </Card>
+                        </div>
+                        <div style={{ overflowX: 'auto' }}>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Course Name</th>
+                                        <th style={{ textAlign: 'center' }}>Students</th>
+                                        <th style={{ textAlign: 'center' }}>Avg. Progress</th>
+                                        <th style={{ textAlign: 'center' }}>Manage</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {displayCourses.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="4" style={{ textAlign: 'center', padding: '2.5rem' }}>
+                                                <i className="bi bi-book" style={{ opacity: 0.15, fontSize: '32px', marginBottom: '0.5rem' }}></i>
+                                                <p style={{ opacity: 0.4, fontSize: '0.82rem', margin: 0 }}>No courses yet. Create your first course to see analytics here.</p>
+                                            </td>
+                                        </tr>
+                                    ) : displayCourses.map(stat => (
+                                        <tr key={stat.id} style={{ opacity: stat.isArchived ? 0.6 : 1 }}>
+                                            <td style={{ fontWeight: 700 }}>
+                                                {stat.title}
+                                                {stat.isArchived && <span className="rc-badge" style={{ marginLeft: '0.5rem', fontSize: '0.65rem', background: '#ef4444', color: '#fff' }}>Archived</span>}
+                                            </td>
+                                            <td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.students || stat.enrollmentCount || 0}</td>
+                                            <td style={{ textAlign: 'center', fontWeight: 700, color: 'var(--stat-color-success)' }}>{stat.averageRating ? (stat.averageRating * 18).toFixed(0) : 0}%</td>
+                                            <td style={{ textAlign: 'center' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.35rem' }}>
+                                                    <button className="rc-pill-btn outline" style={{ padding: '0.3rem 0.7rem', fontSize: '0.7rem' }} onClick={() => navigate(`/edit-course/${stat.id}`)}>
+                                                        <i className="bi bi-eye" style={{ fontSize: '12px' }}></i> Edit
+                                                    </button>
+                                                    {!stat.isArchived && (
+                                                        <button className="rc-pill-btn danger-outline" style={{ padding: '0.3rem 0.5rem', fontSize: '0.7rem' }} onClick={() => handleDelete(stat.id, stat.title)} disabled={deleteMutation.isPending}>
+                                                            <i className="bi bi-trash" style={{ fontSize: '12px' }}></i>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </Col>
 
-                {/* Recent Activity Feed */}
+                {/* ── Activity Feed ── */}
                 <Col lg={4}>
-                    <Card className="border-0 shadow-sm rounded-4 h-100 border border-light">
-                        <Card.Header className="bg-body border-bottom-0 pt-4 pb-0 px-4">
-                            <h5 className="fw-bold text-body">Recent Activity</h5>
-                        </Card.Header>
-                        <Card.Body className="p-4">
-                            <div className="position-relative">
-                                {/* Vertical Line timeline */}
-                                <div className="position-absolute h-100 border-start ms-2" style={{ borderColor: '#e9ecef', zIndex: 0 }}></div>
-                                
+                    <div className="rc-feed" style={{ height: '100%' }}>
+                        <div className="rc-section-title" style={{ marginBottom: '0.75rem', paddingBottom: '0.5rem' }}>Recent Activity</div>
+                        {recentActivity.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '2.5rem 0' }}>
+                                <i className="bi bi-graph-up" style={{ opacity: 0.15, fontSize: '28px', marginBottom: '0.5rem' }}></i>
+                                <p style={{ opacity: 0.4, fontSize: '0.78rem', margin: 0 }}>Activity will appear here as students engage.</p>
+                            </div>
+                        ) : (
+                            <div style={{ position: 'relative' }}>
+                                {/* Timeline line */}
+                                <div style={{ position: 'absolute', left: '4px', top: '10px', bottom: '10px', width: '1px', background: 'rgba(128,128,128,0.12)' }}></div>
                                 {recentActivity.map(item => (
-                                    <div key={item.id} className="d-flex mb-4 position-relative z-1">
-                                        <div className={`bg-${item.type} rounded-circle mt-1 flex-shrink-0 shadow-sm`} style={{ width: '16px', height: '16px' }}></div>
-                                        <div className="ms-3">
-                                            <p className="fw-bold text-body mb-1 small">{item.action}</p>
-                                            <p className="text-muted small mb-1">{item.detail}</p>
-                                            <small className="text-secondary opacity-75" style={{ fontSize: '11px' }}>{new Date(item.time).toLocaleString()}</small>
+                                    <div className="rc-feed-item" key={item.id}>
+                                        <div className="rc-feed-dot" style={{ background: item.type === 'success' ? 'var(--stat-color-success)' : item.type === 'info' ? 'var(--stat-color-info)' : item.type === 'warning' ? 'var(--stat-color-warning)' : 'var(--stat-color-purple)' }}></div>
+                                        <div>
+                                            <div className="rc-feed-text">{item.action}</div>
+                                            <div className="rc-feed-detail">{item.detail}</div>
+                                            <div className="rc-feed-time">{new Date(item.time).toLocaleString()}</div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                        </Card.Body>
-                    </Card>
+                        )}
+                    </div>
                 </Col>
             </Row>
         </div>

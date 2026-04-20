@@ -18,21 +18,24 @@ public class NotificationService : INotificationService
 
     public async Task CreateNotificationAsync(string userId, string title, string message)
     {
-        var notification = new Notification
-        {
-            UserId = userId,
-            Title = title,
-            Message = message,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _context.Notifications.Add(notification);
-        await _context.SaveChangesAsync();
-
-        // Check if user has an email, then send it via Background job ideally,
-        // but await here for simple logic.
         var user = await _context.Users.FindAsync(userId);
-        if (user != null && !string.IsNullOrEmpty(user.Email))
+        if (user == null) return;
+
+        if (user.PrefInAppNotif)
+        {
+            var notification = new Notification
+            {
+                UserId = userId,
+                Title = title,
+                Message = message,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Notifications.Add(notification);
+            await _context.SaveChangesAsync();
+        }
+
+        if (user.PrefEmailNotif && !string.IsNullOrEmpty(user.Email))
         {
             await _emailService.SendEmailAsync(user.Email, title, message);
         }
@@ -49,18 +52,22 @@ public class NotificationService : INotificationService
 
         foreach (var enrollment in enrollments)
         {
-            notifications.Add(new Notification
-            {
-                UserId = enrollment.StudentId,
-                Title = title,
-                Message = message,
-                CreatedAt = DateTime.UtcNow
-            });
+            var student = enrollment.Student;
 
-            // Trigger mock email
-            if (!string.IsNullOrEmpty(enrollment.Student.Email))
+            if (student.PrefInAppNotif)
             {
-                await _emailService.SendEmailAsync(enrollment.Student.Email, title, message);
+                notifications.Add(new Notification
+                {
+                    UserId = student.Id,
+                    Title = title,
+                    Message = message,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
+            if (student.PrefEmailNotif && !string.IsNullOrEmpty(student.Email))
+            {
+                await _emailService.SendEmailAsync(student.Email, title, message);
             }
         }
 

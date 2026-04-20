@@ -12,15 +12,53 @@ using Dawn.Infrastructure.Mapping;
 using Dawn.Api.Services;
 using Dawn.Api.Data;
 using Dawn.Api.Hubs;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
+using QuestPDF.Infrastructure;
+
+// Set QuestPDF license
+QuestPDF.Settings.License = LicenseType.Community;
 
 try
 {
     var builder = WebApplication.CreateBuilder(args);
+    
+    // Configure Kestrel to allow large file uploads (100MB)
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.Limits.MaxRequestBodySize = 104857600; // 100MB
+    });
+
     // --- 1. SERVICES CONFIGURATION ---
     builder.Services.AddAutoMapper(cfg => cfg.AddProfile<MappingProfiles>());
-    builder.Services.AddControllers();
+    builder.Services.AddControllers()
+        .AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+            options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+        });
+
+    // Configure FormOptions to allow large multipart/form-data requests (100MB)
+    builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+    {
+        options.MultipartBodyLengthLimit = 104857600; // 100MB
+    });
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddHttpClient();
+
+    // Add Rate Limiting (specifically for Login)
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.AddFixedWindowLimiter("LoginLimiter", opt =>
+        {
+            opt.Window = TimeSpan.FromMinutes(5);
+            opt.PermitLimit = 5;
+            opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+            opt.QueueLimit = 2;
+        });
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    });
 
     // Swagger Configuration with JWT Support
     builder.Services.AddSwaggerGen(options =>
@@ -67,6 +105,26 @@ try
     builder.Services.AddScoped<IFileService, FileService>();
     builder.Services.AddScoped<IEmailService, EmailService>();
     builder.Services.AddScoped<INotificationService, NotificationService>();
+
+    // Redis Caching
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = builder.Configuration.GetSection("Redis").Value;
+        options.InstanceName = "Dawn_";
+    });
+    
+    // Register IConnectionMultiplexer to allow scanning Redis keys
+    var redisConnectionString = builder.Configuration.GetSection("Redis").Value ?? "localhost:6379";
+    if (!redisConnectionString.Contains("abortConnect=false", StringComparison.OrdinalIgnoreCase))
+    {
+        redisConnectionString += ",abortConnect=false";
+    }
+    
+    builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(
+        StackExchange.Redis.ConnectionMultiplexer.Connect(redisConnectionString)
+    );
+    
+    builder.Services.AddScoped<ICacheService, CacheService>();
 
     // Native C# AI/ML Services 
     builder.Services.AddSingleton<IProfanityFilterService, ProfanityFilterService>();
@@ -132,6 +190,7 @@ try
         .AllowAnyHeader()
         .AllowCredentials());
 
+    app.UseRateLimiter(); // Enable rate limiter middleware
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();

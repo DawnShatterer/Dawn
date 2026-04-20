@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getMyNotifications, getUnreadCount, markAsRead, markAllAsRead } from '../api/notificationService';
 import { Dropdown, Badge, Spinner } from 'react-bootstrap';
-import { Bell, Check, CheckCheck } from 'lucide-react';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 import { useNavigate } from 'react-router-dom';
 
 const NotificationBell = () => {
@@ -41,10 +41,15 @@ const NotificationBell = () => {
     const unreadCount = unreadData?.count || 0;
 
     return (
-        <Dropdown show={isOpen} onToggle={(val) => setIsOpen(val)} align="end">
-            <Dropdown.Toggle as="div" className="position-relative nav-link" style={{ cursor: 'pointer' }}>
+        <Dropdown show={isOpen} onToggle={(val) => setIsOpen(val)} align="end" drop="down">
+            <style>{`
+                .bell-toggle.dropdown-toggle::after {
+                    display: none !important;
+                }
+            `}</style>
+            <Dropdown.Toggle as="div" className="position-relative nav-link bell-toggle" style={{ cursor: 'pointer' }}>
                 <div className="p-2 rounded-circle bg-body-tertiary d-flex align-items-center justify-content-center" style={{ width: '40px', height: '40px' }}>
-                    <Bell size={20} className="text-secondary" />
+                    <i className="bi bi-bell text-secondary" style={{ fontSize: '20px' }}></i>
                 </div>
                 {unreadCount > 0 && (
                     <Badge bg="danger" pill className="position-absolute top-0 start-50 translate-middle mt-1 shadow-sm" style={{ fontSize: '10px' }}>
@@ -58,7 +63,7 @@ const NotificationBell = () => {
                     <h6 className="m-0 fw-bold">Notifications</h6>
                     {unreadCount > 0 && (
                         <button className="btn btn-link text-decoration-none p-0 small text-primary d-flex align-items-center" onClick={() => readAllMutation.mutate()}>
-                            <CheckCheck size={14} className="me-1"/> Mark all read
+                            <i className="bi bi-check-all me-1" style={{ fontSize: '14px' }}></i> Mark all read
                         </button>
                     )}
                 </div>
@@ -85,7 +90,7 @@ const NotificationBell = () => {
                             <h6 className={`mb-0 ${!notif.isRead ? 'fw-bold text-body' : 'text-muted'}`}>{notif.title}</h6>
                             {!notif.isRead && (
                                 <button className="btn btn-link p-0 text-primary" onClick={(e) => { e.stopPropagation(); readMutation.mutate(notif.id); }} title="Mark as read">
-                                    <Check size={16} />
+                                    <i className="bi bi-check" style={{ fontSize: '16px' }}></i>
                                 </button>
                             )}
                         </div>

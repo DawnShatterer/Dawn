@@ -37,17 +37,17 @@ public class AITutorController : ControllerBase
     {
         // ═══ GREETINGS ═══
         (new[] { "hello", "hi", "hey", "namaste", "good morning", "good evening" },
-         "Namaste! 🙏 I'm Dawn, your AI learning assistant. I can help you navigate the platform, explain concepts, or recommend courses. What would you like to know?",
+         "Namaste! 🙏 Hey there! I can help you navigate Dawn, explain concepts, or point you to the right courses. What's on your mind?",
          new[] { "Show my courses", "How do I enroll?", "Tell me a study tip" }),
 
         (new[] { "how are you", "what's up", "sup" },
-         "I'm running at peak performance! 🚀 Ready to help you crush your learning goals. What can I do for you?",
+         "Doing great! 😊 Ready to help you with whatever you need. What can I do for you?",
          new[] { "Recommend a course", "Help with coding", "Study tips" }),
 
         // ═══ PLATFORM NAVIGATION ═══
         (new[] { "dashboard", "home page", "main page" },
          "Your **Dashboard** is your command center! 📊\n\n• **Students** see enrolled courses, progress bars, and learning stats\n• **Teachers** see their published courses and student engagement\n• **Admins** see platform-wide analytics\n\nJust click 'Dashboard' in the sidebar to get there!",
-         new[] { "How do I enroll?", "Where are my certificates?", "Show course catalog" }),
+         new[] { "How do I enroll?", "Where is my progress?", "Show course catalog" }),
 
         (new[] { "enroll", "join course", "sign up for course", "register course" },
          "To **enroll in a course**:\n\n1. Go to the **Course Catalog** from the sidebar\n2. Click on any course that interests you\n3. Hit the **'Enroll Now'** button\n4. You'll instantly see it on your Dashboard!\n\nFree courses are enrolled immediately. Paid courses will prompt payment first.",
@@ -57,8 +57,8 @@ public class AITutorController : ControllerBase
          "To **unenroll** from a course, go to the Course Detail page and click the **'Unenroll'** button. Your progress will be saved in case you want to rejoin later!",
          new[] { "Show my enrollments", "Find new courses", "Contact teacher" }),
 
-        (new[] { "certificate", "certificates", "completion certificate" },
-         "🎓 **Certificates** are awarded when you complete 100% of a course!\n\nOnce completed, go to the **Certificates** page from your sidebar to view and download your achievement certificates as PDFs.",
+        (new[] { "completion", "completed", "finish", "done" },
+         "🌟 **Course Completion** happens when you finish 100% of the lessons and quizzes!\n\nYour status is tracked automatically on your Dashboard. Keep pushing through those modules to reach 100%!",
          new[] { "How to complete a course?", "Show my progress", "Dashboard" }),
 
         (new[] { "quiz", "quizzes", "test", "exam", "assessment" },
@@ -79,10 +79,10 @@ public class AITutorController : ControllerBase
 
         (new[] { "profile", "account", "settings", "my account" },
          "👤 To manage your **profile**:\n\n• Click your name/avatar in the top navigation\n• Update your full name, email, or password\n• View your role (Student, Teacher, Admin)\n\nKeep your profile updated for a personalized experience!",
-         new[] { "Change password", "Dashboard", "My certificates" }),
+         new[] { "Change password", "Dashboard", "My progress" }),
 
         (new[] { "notification", "notifications", "alerts" },
-         "🔔 **Notifications** keep you informed about:\n\n• New course enrollments\n• Quiz results\n• Discussion replies\n• Certificate awards\n\nCheck the bell icon in the top navigation bar!",
+         "🔔 **Notifications** keep you informed about:\n\n• New course enrollments\n• Quiz results\n• Discussion replies\n• Announcements from your instructors\n\nCheck the bell icon in the top navigation bar!",
          new[] { "Dashboard", "My courses", "Discussion forum" }),
 
         // ═══ PROGRAMMING HELP ═══
@@ -165,16 +165,20 @@ public class AITutorController : ControllerBase
          new[] { "Study tips", "Show my courses", "Programming help" }),
 
         (new[] { "who are you", "what are you", "what can you do" },
-         "I'm **Dawn AI Tutor** 🤖 — your personal learning assistant!\n\n**I can help you with:**\n• 🧭 Navigating the Dawn platform\n• 💻 Programming concepts (Python, JS, C#, Java, etc.)\n• 📖 Study tips and exam preparation\n• 📊 Understanding your progress\n• 🎯 Course recommendations\n\nJust ask me anything!",
+         "I'm your **Dawn Learning Coach** 😊 — here to support your studies!\n\n**I can help you with:**\n• 🧭 Navigating the Dawn platform\n• 💻 Programming concepts (Python, JS, C#, Java, etc.)\n• 📖 Study tips and exam preparation\n• 📊 Understanding your progress\n• 🎯 Course recommendations\n\nJust ask me anything!",
          new[] { "Recommend a course", "Programming help", "Study tips" }),
 
         (new[] { "recommend", "suggestion", "what should i learn", "course recommendation" },
-         "Based on popular choices, here are my top recommendations:\n\n🔥 **Trending Now:**\n1. Full-Stack Web Development (React + C#)\n2. Python for Data Science\n3. Mobile App Development\n4. Cloud Computing Basics\n\nCheck your **Dashboard** for AI-powered personalized recommendations based on your enrollment history!",
+         "Based on popular choices, here are my top recommendations:\n\n🔥 **Trending Now:**\n1. Full-Stack Web Development (React + C#)\n2. Python for Data Science\n3. Mobile App Development\n4. Cloud Computing Basics\n\nCheck your **Dashboard** for personalized suggestions based on your learning history!",
          new[] { "How to enroll?", "Python tips", "JavaScript tips" }),
 
+        (new[] { "course", "courses", "find a course", "what course", "catalog", "tell me about course" },
+         "📚 Dawn offers a variety of courses!\n\nYou can browse our **Course Catalog** to find free and paid courses. We have topics ranging from Programming like Python and React, to Design and Business.\n\nType **'latest course'** or **'popular course'** to see what's trending!",
+         new[] { "Latest course", "Popular course", "Recommend courses" }),
+
         (new[] { "progress", "my progress", "how am i doing", "track progress" },
-         "📊 **Your progress** is tracked automatically!\n\nAs you complete lessons and quizzes, your progress bar updates in real-time on your Dashboard.\n\n• Complete all lessons → 100% progress\n• 100% progress → 🎓 Certificate unlocked!\n\nKeep pushing forward!",
-         new[] { "Dashboard", "My certificates", "Show my courses" }),
+         "📊 **Your progress** is tracked automatically!\n\nAs you complete lessons and quizzes, your progress bar updates in real-time on your Dashboard.\n\n• Complete all lessons → 100% progress\n• 100% progress → 🎓 Course Completed!\n\nKeep pushing forward!",
+         new[] { "Dashboard", "My courses", "Show my courses" }),
 
         (new[] { "password", "change password", "forgot password", "reset password" },
          "🔐 **Password Management:**\n\n• To change your password, go to your **Profile/Settings** page\n• If you forgot your password, use the **'Forgot Password'** link on the login page\n• Use a strong password: at least 6 characters with numbers\n\nStay secure!",
@@ -221,7 +225,7 @@ public class AITutorController : ControllerBase
 
             if (lessons.Any())
             {
-                var searchResult = _searchService.HybridSearch(request.Message, lessons);
+                var searchResult = _searchService.HybridSearch(input, lessons);
                 if (searchResult != null)
                 {
                     return Ok(new
@@ -232,6 +236,40 @@ public class AITutorController : ControllerBase
                         Method = searchResult.SearchMethod
                     });
                 }
+            }
+        }
+
+        // ═══ STEP 2.5: Dynamic Platform Queries ═══
+        if (inputLower.Contains("latest course") || inputLower.Contains("new course") || inputLower.Contains("recent course"))
+        {
+            var latestCourse = await _context.Courses
+                .OrderByDescending(c => c.Id)
+                .FirstOrDefaultAsync();
+
+            if (latestCourse != null)
+            {
+                return Ok(new
+                {
+                    Response = $"🌟 The latest module added to Dawn is **{latestCourse.Title}**!\n\nYou can find it in the Course Catalog. Want me to recommend some modules tailored for you?",
+                    Suggestions = new[] { "Recommend courses", "Show catalog" }
+                });
+            }
+        }
+
+        if (inputLower.Contains("popular course") || inputLower.Contains("top course") || inputLower.Contains("best course"))
+        {
+            var popularCourse = await _context.Courses
+                .Include(c => c.Enrollments)
+                .OrderByDescending(c => c.Enrollments.Count)
+                .FirstOrDefaultAsync();
+
+            if (popularCourse != null)
+            {
+                return Ok(new
+                {
+                    Response = $"🔥 Our most popular course right now is **{popularCourse.Title}**!\n\nIt has {popularCourse.Enrollments.Count} students learning from it. You can check it out in the Course Catalog.",
+                    Suggestions = new[] { "Recommend courses", "How to enroll?" }
+                });
             }
         }
 
@@ -254,7 +292,7 @@ public class AITutorController : ControllerBase
         // ═══ STEP 4: Generic Fallback ═══
         return Ok(new
         {
-            Response = $"That's a thoughtful question about \"{request.Message}\"! 🤔\n\nI'm continuously learning, but I might not have a specific answer for that yet. Here's what I suggest:\n\n• Check the **Discussion Forum** in your course\n• Ask your **instructor** directly\n• Try rephrasing your question with keywords like 'python', 'quiz', 'enroll', etc.\n\nI'm best at helping with platform navigation, programming concepts, and study tips!",
+            Response = $"Hmm, that's a great question about \"{request.Message}\"! 🤔\n\nI'm not sure about that one specifically. Here's what I'd suggest:\n\n• Check the **Discussion Forum** in your course\n• Ask your **instructor** directly\n• Try rephrasing — I'm best with keywords like 'python', 'quiz', 'enroll', etc.\n\nHappy to help with platform navigation, coding concepts, or study tips!",
             Suggestions = new[] { "What can you do?", "Study tips", "Show my courses" }
         });
     }

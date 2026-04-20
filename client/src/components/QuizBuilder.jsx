@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Card, Button, Form, Row, Col, Badge } from 'react-bootstrap';
-import { Plus, Trash2, CheckCircle } from 'lucide-react';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 
 const QuizBuilder = ({ courseId, onSave, onCancel }) => {
     const [title, setTitle] = useState('');
@@ -75,7 +75,7 @@ const QuizBuilder = ({ courseId, onSave, onCancel }) => {
                             <Card.Body className="p-3">
                                 <div className="d-flex justify-content-between mb-3">
                                     <Badge bg="secondary" className="fs-6 px-3 py-2">Question {qIndex + 1}</Badge>
-                                    <Button variant="outline-danger" size="sm" onClick={() => removeQuestion(qIndex)}><Trash2 size={16}/></Button>
+                                    <Button variant="outline-danger" size="sm" onClick={() => removeQuestion(qIndex)}><i className="bi bi-trash" style={{ fontSize: '16px' }}></i></Button>
                                 </div>
                                 <Row className="mb-3">
                                     <Col md={9}>
@@ -103,12 +103,12 @@ const QuizBuilder = ({ courseId, onSave, onCancel }) => {
                                                 onChange={e => updateOption(qIndex, oIndex, 'text', e.target.value)} 
                                             />
                                             {q.options.length > 2 && (
-                                                <Button variant="link" className="text-danger p-0 ms-1" onClick={() => removeOption(qIndex, oIndex)}><Trash2 size={14}/></Button>
+                                                <Button variant="link" className="text-danger p-0 ms-1" onClick={() => removeOption(qIndex, oIndex)}><i className="bi bi-trash" style={{ fontSize: '14px' }}></i></Button>
                                             )}
                                         </div>
                                     ))}
                                     <Button variant="link" className="text-decoration-none small p-0 mt-1" onClick={() => addOption(qIndex)}>
-                                        <Plus size={14} className="me-1"/> Add Option
+                                        <i className="bi bi-plus me-1" style={{ fontSize: '14px' }}></i> Add Option
                                     </Button>
                                 </div>
                             </Card.Body>
@@ -116,12 +116,12 @@ const QuizBuilder = ({ courseId, onSave, onCancel }) => {
                     ))}
 
                     <Button variant="outline-primary" className="mb-4 w-100 py-2 border-dashed" style={{ borderStyle: 'dashed' }} onClick={addQuestion}>
-                        <Plus size={18} className="me-2"/> Add Another Question
+                        <i className="bi bi-plus me-2" style={{ fontSize: '18px' }}></i> Add Another Question
                     </Button>
 
                     <div className="d-flex justify-content-end gap-2 border-top pt-4">
                         <Button variant="light" onClick={onCancel}>Cancel</Button>
-                        <Button variant="primary" type="submit" className="fw-bold px-4"><CheckCircle size={18} className="me-2"/> Save Assessment</Button>
+                        <Button variant="primary" type="submit" className="fw-bold px-4"><i className="bi bi-check-circle me-2" style={{ fontSize: '18px' }}></i> Save Assessment</Button>
                     </div>
                 </Form>
             </Card.Body>

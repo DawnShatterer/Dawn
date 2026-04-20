@@ -2,15 +2,15 @@ import React, { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Container, Card, Form, Button, Alert, Spinner, InputGroup } from 'react-bootstrap';
-import { KeyRound, Eye, EyeOff } from 'lucide-react';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 import api from '../api/axios';
 
 const ResetPassword = () => {
     const [searchParams] = useSearchParams();
-    const token = searchParams.get('token');
     const email = searchParams.get('email');
     const navigate = useNavigate();
 
+    const [code, setCode] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -50,17 +50,22 @@ const ResetPassword = () => {
             return;
         }
 
+        if (code.length !== 6) {
+            setErrorMessage("Please enter a valid 6-digit verification code.");
+            return;
+        }
+
         mutation.mutate({
             email: email,
-            token: token,
+            token: code,
             newPassword: password
         });
     };
 
-    if (!token || !email) {
+    if (!email) {
         return (
             <div className="bg-body-tertiary min-vh-100 font-sans d-flex align-items-center justify-content-center">
-                <Alert variant="danger">Invalid password reset link.</Alert>
+                <Alert variant="danger">Invalid password reset request (missing email).</Alert>
             </div>
         );
     }
@@ -72,9 +77,9 @@ const ResetPassword = () => {
                     <Card.Body className="p-5">
                         <div className="text-center mb-4">
                             <div className="bg-success bg-opacity-10 text-success rounded-circle d-inline-flex p-3 mb-3">
-                                <KeyRound size={32} />
+                                <i className="bi bi-key" style={{ fontSize: '32px' }}></i>
                             </div>
-                            <h2 className="fw-bold text-body tracking-tight fs-3">Set New Password</h2>
+                            <h2 className="fw-bold tracking-tight fs-3">Set New Password</h2>
                             <p className="text-muted small">Your new password must be securely chosen.</p>
                         </div>
 
@@ -82,6 +87,24 @@ const ResetPassword = () => {
                         {errorMessage && <Alert variant="danger" className="border-0 shadow-sm py-2 text-center small fw-bold">{errorMessage}</Alert>}
 
                         <Form onSubmit={handleSubmit} className={successMessage ? 'd-none' : ''}>
+                            <Form.Group className="mb-4">
+                                <Form.Label className="small fw-bold d-flex justify-content-between">
+                                    <span>Verification Code</span>
+                                    <span className="text-muted fw-normal">Sent to {email}</span>
+                                </Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    placeholder="Enter 6-digit code"
+                                    value={code}
+                                    onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                                    className="text-center fw-bold fs-4 py-2 bg-body-secondary border-0"
+                                    style={{ letterSpacing: '8px' }}
+                                    maxLength={6}
+                                    required
+                                    autoFocus
+                                />
+                            </Form.Group>
+
                             <Form.Group className="mb-3">
                                 <Form.Label className="small fw-bold">New Password</Form.Label>
                                 <InputGroup>
@@ -93,7 +116,7 @@ const ResetPassword = () => {
                                         required
                                     />
                                     <Button variant="outline-secondary" onClick={() => setShowPassword(!showPassword)}>
-                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        {showPassword ? <i className="bi bi-eye-slash" style={{ fontSize: '18px' }}></i> : <i className="bi bi-eye" style={{ fontSize: '18px' }}></i>}
                                     </Button>
                                 </InputGroup>
                             </Form.Group>
@@ -109,7 +132,7 @@ const ResetPassword = () => {
                                         required
                                     />
                                     <Button variant="outline-secondary" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
-                                        {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        {showConfirmPassword ? <i className="bi bi-eye-slash" style={{ fontSize: '18px' }}></i> : <i className="bi bi-eye" style={{ fontSize: '18px' }}></i>}
                                     </Button>
                                 </InputGroup>
                             </Form.Group>
@@ -118,7 +141,7 @@ const ResetPassword = () => {
                                 variant="primary" 
                                 type="submit" 
                                 className="w-100 py-2 fw-bold shadow-sm rounded-pill mb-3"
-                                disabled={mutation.isPending || !password || !confirmPassword}
+                                disabled={mutation.isPending || !password || !confirmPassword || code.length !== 6}
                             >
                                 {mutation.isPending ? <Spinner size="sm" /> : 'Confirm Reset'}
                             </Button>

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getQuizDetails, submitQuiz } from '../api/quizService';
 import { Card, Button, Form, Spinner, Alert, Badge } from 'react-bootstrap';
-import { CheckCircle, ArrowRight, Award } from 'lucide-react';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 
 const QuizTaker = ({ quizId, courseId, onBack }) => {
+    const queryClient = useQueryClient();
     const [answers, setAnswers] = useState({});
     const [result, setResult] = useState(null);
 
@@ -16,7 +17,11 @@ const QuizTaker = ({ quizId, courseId, onBack }) => {
 
     const submitMutation = useMutation({
         mutationFn: (data) => submitQuiz(quizId, data),
-        onSuccess: (data) => setResult(data)
+        onSuccess: (data) => {
+            setResult(data);
+            // Invalidate grade roster to refresh when quizzes are submitted
+            queryClient.invalidateQueries(['course-grades']);
+        }
     });
 
     const handleSelect = (questionId, optionId) => {
@@ -44,7 +49,7 @@ const QuizTaker = ({ quizId, courseId, onBack }) => {
         return (
             <Card className="border-0 shadow-lg mb-4 bg-body text-center">
                 <Card.Body className="p-5">
-                    <Award size={64} className={`mb-3 ${passed ? 'text-success' : 'text-danger'}`} />
+                    <i className={`bi bi-award mb-3 ${passed ? 'text-success' : 'text-danger'}`} style={{ fontSize: '64px' }}></i>
                     <h2 className="fw-bold mb-2">{passed ? 'Congratulations!' : 'Keep Trying!'}</h2>
                     <p className="text-muted fs-5 mb-4">You have completed the assessment.</p>
                     
@@ -112,7 +117,7 @@ const QuizTaker = ({ quizId, courseId, onBack }) => {
                         onClick={handleSubmit}
                         disabled={submitMutation.isPending}
                     >
-                        {submitMutation.isPending ? 'Submitting...' : <><CheckCircle size={20} className="me-2"/> Submit Assessment</>}
+                        {submitMutation.isPending ? 'Submitting...' : <><i className="bi bi-check-circle me-2" style={{ fontSize: '20px' }}></i> Submit Assessment</>}
                     </Button>
                 </div>
             </Card.Body>

@@ -1,3 +1,27 @@
+# Dawn LMS - Client Application
+
+React + Vite frontend for the Dawn Learning Management System.
+
+## Development Server
+
+The development server runs on **port 5173** by default (Vite default).
+
+To start the development server:
+```bash
+npm run dev
+```
+
+To change the port, update the `vite.config.js` file or use the `--port` flag:
+```bash
+npm run dev -- --port 3000
+```
+
+## API Configuration
+
+The client connects to the Dawn API server running on **port 5159**. The API base URL is configured in `client/src/api/axios.js`.
+
+---
+
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

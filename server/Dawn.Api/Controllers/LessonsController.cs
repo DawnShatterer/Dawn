@@ -34,6 +34,7 @@ namespace Dawn.Api.Controllers
             _notificationService = notificationService;
         }
 
+        [AllowAnonymous]
         [HttpGet("course/{courseId}")]
         public async Task<ActionResult<List<LessonDto>>> GetCourseLessons(int courseId)
         {
@@ -43,29 +44,73 @@ namespace Dawn.Api.Controllers
             var course = await _context.Courses.FindAsync(courseId);
             if (course == null) return NotFound("Course not found");
 
-            bool isAllowed = false;
-            if (course.InstructorId == userId || userRole?.ToLower() == "admin")
+            bool isEnrolledOrAdmin = false;
+            if (userId != null)
             {
-                isAllowed = true;
+                if (course.InstructorId == userId || userRole?.ToLower() == "admin")
+                {
+                    isEnrolledOrAdmin = true;
+                }
+                else
+                {
+                    isEnrolledOrAdmin = await _context.Enrollments.AnyAsync(e => e.StudentId == userId && e.CourseId == courseId);
+                }
             }
-            else
-            {
-                var isEnrolled = await _context.Enrollments.AnyAsync(e => e.StudentId == userId && e.CourseId == courseId);
-                if (isEnrolled) isAllowed = true;
-            }
-
-            if (!isAllowed) return Forbid();
 
             var lessons = await _context.Lessons
                 .Where(l => l.CourseId == courseId)
                 .OrderBy(l => l.Order)
                 .ToListAsync();
 
-            return Ok(_mapper.Map<List<LessonDto>>(lessons));
+            var lessonDtos = _mapper.Map<List<LessonDto>>(lessons);
+
+            // Hide content for non-enrolled users unless it's a free preview
+            if (!isEnrolledOrAdmin)
+            {
+                foreach (var dto in lessonDtos)
+                {
+                    if (!dto.IsFreePreview)
+                    {
+                        dto.IsLocked = true;
+                        dto.VideoUrl = null;
+                        dto.PdfUrl = null;
+                        dto.PptUrl = null;
+                    }
+                }
+            }
+
+            // Apply sequential locking logic for students
+            if (course.IsSequential && userRole?.ToLower() == "student")
+            {
+                var completedLessonIds = await _context.LessonProgresses
+                    .Where(lp => lp.StudentId == userId && lp.IsCompleted)
+                    .Select(lp => lp.LessonId)
+                    .ToListAsync();
+
+                bool previousCompleted = true; // The first lesson is always unlocked
+
+                foreach (var dto in lessonDtos)
+                {
+                    if (!previousCompleted)
+                    {
+                        dto.IsLocked = true;
+                        // Hide content for locked lessons
+                        dto.VideoUrl = null;
+                        dto.PdfUrl = null;
+                        dto.PptUrl = null;
+                    }
+
+                    // For the next iteration, check if THIS lesson is completed
+                    previousCompleted = completedLessonIds.Contains(dto.Id);
+                }
+            }
+
+            return Ok(lessonDtos);
         }
 
         [HttpPost]
         [Authorize(Roles = "Teacher,Admin")]
+        [RequestSizeLimit(104857600)] // 100MB
         public async Task<ActionResult<LessonDto>> CreateLesson([FromForm] LessonCreateDto dto)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -73,6 +118,15 @@ namespace Dawn.Api.Controllers
             
             if (course == null) return NotFound("Course not found");
             if (course.InstructorId != userId) return Forbid();
+
+            // Syllabus Integrity Lock: Prevent adding lessons if anyone has already graduated
+            var anyoneGraduated = await _context.Enrollments
+                .AnyAsync(e => e.CourseId == dto.CourseId && e.Progress >= 100);
+            
+            if (anyoneGraduated)
+            {
+                return BadRequest("This course syllabus is locked because students have already completed the module. Adding lessons now would invalidate their completion status.");
+            }
 
             string? videoUrl = null;
             string? pdfUrl = null;
@@ -110,10 +164,12 @@ namespace Dawn.Api.Controllers
                 Title = dto.Title,
                 Description = dto.Description,
                 Order = dto.Order,
+                CompletionWeight = dto.CompletionWeight,
                 CourseId = dto.CourseId,
                 VideoUrl = videoUrl,
                 PdfUrl = pdfUrl,
-                PptUrl = pptUrl
+                PptUrl = pptUrl,
+                IsFreePreview = dto.IsFreePreview
             };
 
             _context.Lessons.Add(lesson);
@@ -139,6 +195,15 @@ namespace Dawn.Api.Controllers
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (lesson.Course.InstructorId != userId) return Forbid();
+
+            // Syllabus Integrity Lock: Prevent deleting lessons if anyone has already graduated
+            var anyoneGraduated = await _context.Enrollments
+                .AnyAsync(e => e.CourseId == lesson.CourseId && e.Progress >= 100);
+            
+            if (anyoneGraduated)
+            {
+                return BadRequest("This course syllabus is locked because students have already completed the module. Deleting lessons now would invalidate their completion status.");
+            }
 
             // Delete physical files
             if (!string.IsNullOrEmpty(lesson.VideoUrl) && !lesson.VideoUrl.StartsWith("http"))

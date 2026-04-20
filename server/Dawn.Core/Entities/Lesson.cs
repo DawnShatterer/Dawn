@@ -15,7 +15,12 @@ public class Lesson : BaseEntity
     // For sorting lessons sequentially
     public int Order { get; set; } = 0;
 
+    // The contribution of this lesson to the total 100% course completion (e.g. 20)
+    public int CompletionWeight { get; set; } = 1;
+
     // Foreign Key to Course
     public int CourseId { get; set; }
     public Course Course { get; set; } = null!;
+
+    public bool IsFreePreview { get; set; } = false; // Allow access to non-enrolled users
 }

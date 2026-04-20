@@ -10,7 +10,7 @@ export const registerUser = async (userData) => {
     return response.data;
 };
 
-export const googleLogin = async (credential) => {
-    const response = await api.post('/Auth/google-login', { credential });
+export const googleLogin = async (credential, role = null) => {
+    const response = await api.post('/Auth/google-login', { credential, role });
     return response.data;
 };
