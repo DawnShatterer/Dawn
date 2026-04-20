@@ -1,12 +1,12 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, Navigate } from 'react-router-dom';
-import { getCourses, getRecommendedCourses } from '../api/courseService';
 import { getMyEnrollments } from '../api/enrollmentService';
 import { getUserInfo } from '../utils/authUtils';
 import api from '../api/axios';
-import { Spinner, Row, Col, Card, Badge, Button, ProgressBar, Nav, Tab } from 'react-bootstrap';
-import { BookOpen, GraduationCap, Users, Trophy, Sparkles, Target, CheckCircle, Eye, MessageSquare, ClipboardList, BellRing, Calendar, ArrowRight } from 'lucide-react';
+import { Row, Col } from 'react-bootstrap';
+import 'bootstrap-icons/font/bootstrap-icons.css';
+import SkeletonDashboardStats from '../components/SkeletonDashboardStats';
 
 const Dashboard = () => {
     const user = getUserInfo();
@@ -16,348 +16,331 @@ const Dashboard = () => {
     const isTeacher = userRole === 'teacher';
     const isAdmin = userRole === 'admin';
 
-    // Route Admins — use Navigate component instead of navigate() during render
+    const [dashboardSearch, setDashboardSearch] = React.useState('');
+
+    const handleDashboardSearch = (e) => {
+        e.preventDefault();
+        if (dashboardSearch.trim()) {
+            navigate(`/courses?q=${encodeURIComponent(dashboardSearch.trim())}`);
+        }
+    };
+
     if (isAdmin) {
         return <Navigate to="/admin-home" replace />;
     }
 
-    // ─── Queries ───
-    const { data: courses, isLoading: coursesLoading } = useQuery({ queryKey: ['courses'], queryFn: getCourses });
+    if (userRole === 'staff') {
+        return <Navigate to="/admin-home" replace />;
+    }
+
     const { data: enrollments, isLoading: enrollmentsLoading } = useQuery({ queryKey: ['my-enrollments'], queryFn: getMyEnrollments, enabled: isStudent });
     const { data: studentStats } = useQuery({ queryKey: ['student-analytics'], queryFn: async () => { const res = await api.get('/Analytics/student'); return res.data; }, enabled: isStudent });
     const { data: teacherStats } = useQuery({ queryKey: ['teacher-analytics'], queryFn: async () => { const res = await api.get('/Analytics/teacher'); return res.data; }, enabled: isTeacher });
-    const { data: recommendedCourses } = useQuery({ queryKey: ['recommended-courses'], queryFn: getRecommendedCourses, enabled: isStudent });
-
-    // Fetch recent announcements from all enrolled courses
-    const { data: recentAnnouncements } = useQuery({
-        queryKey: ['all-announcements'],
-        queryFn: async () => {
-            if (!enrollments?.length) return [];
-            const courseIds = [...new Set(enrollments.map(e => e.courseId))];
-            const promises = courseIds.slice(0, 5).map(id => api.get(`/Announcements/course/${id}`).then(r => r.data).catch(() => []));
-            const results = await Promise.all(promises);
-            return results.flat().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 8);
-        },
-        enabled: isStudent && !!enrollments?.length
+    
+    // Fetch teacher's courses directly
+    const { data: teacherCourses } = useQuery({ 
+        queryKey: ['teacher-courses'], 
+        queryFn: async () => { 
+            const res = await api.get('/Courses?limit=100'); 
+            const allCourses = res.data?.items || res.data?.data || res.data || [];
+            return Array.isArray(allCourses) ? allCourses.filter(c => c.instructorId === user?.id) : [];
+        }, 
+        enabled: isTeacher 
     });
 
-    if (coursesLoading || (isStudent && enrollmentsLoading)) {
-        return <div className="d-flex justify-content-center align-items-center vh-100 bg-body-tertiary"><Spinner animation="grow" variant="primary" /></div>;
-    }
+    // Removed full-page blocking spinner to allow smooth PageTransition entry.
 
     // ═══════════════════════════════════════
-    // ═══ STUDENT DASHBOARD (MST-Inspired) ═══
+    // ═══ STUDENT DASHBOARD — Refined Clean ═══
     // ═══════════════════════════════════════
     if (isStudent) {
+        if (!user?.batchId) {
+            return (
+                <div className="sd-wrapper" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '60vh' }}>
+                    <div style={{ textAlign: 'center', opacity: 0.5 }}>
+                        <i className="bi bi-book" style={{ marginBottom: '1rem', fontSize: '48px' }}></i>
+                        <h3 className="fw-bold">No Batch Assigned</h3>
+                        <p>Your account has been verified, but you have not been assigned to an academic batch yet.<br/>Please contact the administration office to be assigned to a batch.</p>
+                        <p className="text-muted small mt-3">Student ID: {user?.email}</p>
+                    </div>
+                </div>
+            );
+        }
         const completedCount = studentStats?.stats?.coursesCompleted || 0;
         const inProgressCount = studentStats?.stats?.coursesInProgress || enrollments?.length || 0;
+        const hoursStudied = studentStats?.stats?.totalHoursStudied || studentStats?.stats?.hoursStudied || 0;
 
         return (
-            <div className="container-fluid py-4 min-vh-100 bg-body-tertiary font-sans">
-                
-                {/* ─── Dawn Unique Asymmetrical Layout ─── */}
-                <Row className="g-4 mb-5">
-                    {/* LEFT COLUMN: Hero + Action Cards (8 cols) */}
-                    <Col lg={8}>
-                        
-                        {/* Hero Stats Banner */}
-                        <Card className="border-0 shadow-sm mb-4 overflow-hidden position-relative bg-primary text-white">
-                            <div className="position-absolute top-0 end-0 h-100 opacity-25 pe-none" style={{ width: '40%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.8))' }}></div>
-                            <Card.Body className="p-4 p-md-5 position-relative z-1 d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-                                <div className="mb-4 mb-md-0">
-                                    <Badge bg="light" text="primary" className="mb-3 px-3 py-2 rounded-pill fw-bold shadow-sm">
-                                        <Sparkles size={14} className="me-1" /> Student Portal
-                                    </Badge>
-                                    <h3 className="fw-bold mb-2">Welcome back, {user?.name || 'Student'}!</h3>
-                                    <p className="mb-0 opacity-75" style={{ maxWidth: '400px' }}>
-                                        Continue your learning journey. You have completed {completedCount} {completedCount === 1 ? 'course' : 'courses'} so far.
-                                    </p>
-                                </div>
-                                <div className="d-flex gap-3 text-center">
-                                    <div className="bg-body bg-opacity-25 rounded-4 p-3 shadow-sm" style={{ backdropFilter: 'blur(10px)', minWidth: '100px' }}>
-                                        <h2 className="fw-bold mb-0">{inProgressCount}</h2>
-                                        <small className="fw-medium opacity-75">Active</small>
-                                    </div>
-                                    <div className="bg-body bg-opacity-25 rounded-4 p-3 shadow-sm" style={{ backdropFilter: 'blur(10px)', minWidth: '100px' }}>
-                                        <h2 className="fw-bold mb-0">{studentStats?.stats?.totalHoursLearned || 0}</h2>
-                                        <small className="fw-medium opacity-75">Hours</small>
-                                    </div>
-                                </div>
-                            </Card.Body>
-                        </Card>
+            <div className="sd-wrapper">
+                <Row className="g-4">
+                    {/* ══════ LEFT MAIN CONTENT ══════ */}
+                    <Col lg={8} xl={9}>
 
-                        {/* Action Cards Grid */}
-                        <h6 className="fw-bold text-muted text-uppercase mb-3" style={{ letterSpacing: '0.5px', fontSize: '0.8rem' }}>Quick Actions</h6>
-                        <Row className="g-4">
-                            <Col md={6}>
-                                <Card 
-                                    className="border-0 shadow-sm h-100 position-relative overflow-hidden hover-lift bg-body"
-                                    onClick={() => navigate('/my-courses')}
-                                    style={{ cursor: 'pointer', transition: 'all 0.2s ease-in-out' }}
-                                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.08)'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = ''; }}
-                                >
-                                    <Card.Body className="p-4">
-                                        <div className="bg-primary bg-opacity-10 d-inline-flex p-3 rounded-4 mb-3">
-                                            <BookOpen size={24} className="text-primary" />
-                                        </div>
-                                        <h5 className="fw-bold text-body mb-2">My Learning Journey</h5>
-                                        <p className="text-muted small mb-0 lh-lg">Access your enrolled classrooms, resume videos, and review course materials.</p>
-                                    </Card.Body>
-                                </Card>
-                            </Col>
-                            <Col md={6}>
-                                <Card 
-                                    className="border-0 shadow-sm h-100 position-relative overflow-hidden hover-lift bg-body"
-                                    onClick={() => navigate('/my-courses')}
-                                    style={{ cursor: 'pointer', transition: 'all 0.2s ease-in-out' }}
-                                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.08)'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = ''; }}
-                                >
-                                    <Card.Body className="p-4">
-                                        <div className="bg-danger bg-opacity-10 d-inline-flex p-3 rounded-4 mb-3">
-                                            <Target size={24} className="text-danger" />
-                                        </div>
-                                        <h5 className="fw-bold text-body mb-2">Quizzes & Assessments</h5>
-                                        <p className="text-muted small mb-0 lh-lg">Test your knowledge, submit pending assignments, and view your grades.</p>
-                                    </Card.Body>
-                                </Card>
-                            </Col>
-                            <Col md={12}>
-                                <Card 
-                                    className="border-0 shadow-sm hover-lift bg-body overflow-hidden"
-                                    onClick={() => navigate('/messages')}
-                                    style={{ cursor: 'pointer', transition: 'all 0.2s ease-in-out' }}
-                                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.08)'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = ''; }}
-                                >
-                                    <Card.Body className="p-4 d-flex align-items-center">
-                                        <div className="bg-success bg-opacity-10 d-inline-flex p-3 rounded-4 me-4 flex-shrink-0">
-                                            <MessageSquare size={26} className="text-success" />
-                                        </div>
-                                        <div>
-                                            <h5 className="fw-bold text-body mb-1">Community Hub & Chat Rooms</h5>
-                                            <p className="text-muted small mb-0">Connect with your peers and instructors in real-time chat spaces.</p>
-                                        </div>
-                                        <div className="ms-auto flex-shrink-0 d-none d-sm-block">
-                                            <Button variant="light" className="rounded-circle p-2 text-success shadow-sm">
-                                                <ArrowRight size={20} />
-                                            </Button>
-                                        </div>
-                                    </Card.Body>
-                                </Card>
-                            </Col>
-                        </Row>
+                        {/* ── Greeting ── */}
+                        <div className="sd-greeting mb-4">
+                            <h2>
+                                Welcome back,
+                                <span>{user?.name || 'Student'}</span>
+                            </h2>
+                        </div>
+
+                        {/* ── Stat Pills ── */}
+                        {enrollmentsLoading ? (
+                            <SkeletonDashboardStats count={4} />
+                        ) : (
+                            <div className="sd-stat-row mb-4">
+                                <div className="sd-stat-pill">
+                                    <div className="sd-stat-icon" style={{ background: 'rgba(52,130,82,0.1)' }}>
+                                        <i className="bi bi-book" style={{ color: '#348252', fontSize: '16px' }}></i>
+                                    </div>
+                                    <div>
+                                        <div className="sd-stat-label">Active Courses</div>
+                                        <div className="sd-stat-value">{inProgressCount}</div>
+                                    </div>
+                                </div>
+                                <div className="sd-stat-pill">
+                                    <div className="sd-stat-icon" style={{ background: 'rgba(59,130,246,0.1)' }}>
+                                        <i className="bi bi-mortarboard" style={{ color: '#3b82f6', fontSize: '16px' }}></i>
+                                    </div>
+                                    <div>
+                                        <div className="sd-stat-label">Completed</div>
+                                        <div className="sd-stat-value">{completedCount}</div>
+                                    </div>
+                                </div>
+                                <div className="sd-stat-pill">
+                                    <div className="sd-stat-icon" style={{ background: 'rgba(139,92,246,0.1)' }}>
+                                        <i className="bi bi-clock" style={{ color: '#8b5cf6', fontSize: '16px' }}></i>
+                                    </div>
+                                    <div>
+                                        <div className="sd-stat-label">Hours Studied</div>
+                                        <div className="sd-stat-value">{hoursStudied}h</div>
+                                    </div>
+                                </div>
+                                <div className="sd-stat-pill">
+                                    <div className="sd-stat-icon" style={{ background: 'rgba(245,158,11,0.1)' }}>
+                                        <i className="bi bi-clipboard-check" style={{ color: '#f59e0b', fontSize: '16px' }}></i>
+                                    </div>
+                                    <div>
+                                        <div className="sd-stat-label">Achievements</div>
+                                        <div className="sd-stat-value">{completedCount}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ── Action Grid (2 rows × 3 cols) ── */}
+                        <div className="sd-action-grid mb-4">
+                            {/* Row 1 */}
+                            <div className="sd-action-card" onClick={() => navigate('/my-courses')}>
+                                <div className="sd-action-icon" style={{ background: 'rgba(52,130,82,0.08)' }}>
+                                    <i className="bi bi-book" style={{ color: '#348252', fontSize: '20px' }}></i>
+                                </div>
+                                <p className="sd-action-title">Active Courses</p>
+                                <p className="sd-action-desc">Track and manage your ongoing courses.</p>
+                            </div>
+
+                            <div className="sd-action-card sd-action-highlight" onClick={() => navigate('/my-courses')}>
+                                <div className="sd-action-icon" style={{ background: 'rgba(52,130,82,0.15)' }}>
+                                    <i className="bi bi-bullseye" style={{ color: '#348252', fontSize: '22px' }}></i>
+                                </div>
+                                <p className="sd-action-title">My Learning</p>
+                                <p className="sd-action-desc">Resume videos and course materials.</p>
+                            </div>
+
+                            <div className="sd-action-card" onClick={() => navigate('/my-courses')}>
+                                <div className="sd-action-icon" style={{ background: 'rgba(59,130,246,0.08)' }}>
+                                    <i className="bi bi-clipboard-check" style={{ color: '#3b82f6', fontSize: '20px' }}></i>
+                                </div>
+                                <p className="sd-action-title">Quizzes</p>
+                                <p className="sd-action-desc">Take assessments and view your scores.</p>
+                            </div>
+
+
+
+                            <div className="sd-action-card" onClick={() => navigate('/messages')}>
+                                <div className="sd-action-icon" style={{ background: 'rgba(139,92,246,0.08)' }}>
+                                    <i className="bi bi-chat-dots" style={{ color: '#8b5cf6', fontSize: '20px' }}></i>
+                                </div>
+                                <p className="sd-action-title">Community Hub</p>
+                                <p className="sd-action-desc">Connect with peers and instructors.</p>
+                            </div>
+
+                            <div className="sd-action-card" onClick={() => navigate('/courses')}>
+                                <div className="sd-action-icon" style={{ background: 'rgba(236,72,153,0.08)' }}>
+                                    <i className="bi bi-compass" style={{ color: '#ec4899', fontSize: '20px' }}></i>
+                                </div>
+                                <p className="sd-action-title">Explore</p>
+                                <p className="sd-action-desc">Discover new courses and resources.</p>
+                            </div>
+
+                            <div className="sd-action-card" onClick={() => navigate('/support')}>
+                                <div className="sd-action-icon" style={{ background: 'rgba(239,68,68,0.08)' }}>
+                                    <i className="bi bi-question-circle" style={{ color: '#ef4444', fontSize: '20px' }}></i>
+                                </div>
+                                <p className="sd-action-title">Support Service</p>
+                                <p className="sd-action-desc">Get academic or technical help.</p>
+                            </div>
+                        </div>
+
+
+
+
                     </Col>
 
-                    {/* RIGHT COLUMN: Notice Board (4 cols) */}
-                    <Col lg={4}>
-                        <Card className="border-0 shadow-sm h-100 bg-body d-flex flex-column">
-                            <Card.Header className="bg-transparent border-bottom-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
-                                <h5 className="fw-bold text-body mb-0 d-flex align-items-center">
-                                    <BellRing size={20} className="me-2 text-warning" /> Updates
-                                </h5>
-                            </Card.Header>
-                            <Card.Body className="p-0 flex-grow-1 d-flex flex-column">
-                                <Tab.Container defaultActiveKey="notices">
-                                    <Nav variant="pills" className="px-4 py-3 gap-2" style={{ overflowX: 'auto', flexWrap: 'nowrap' }}>
-                                        <Nav.Item>
-                                            <Nav.Link eventKey="notices" className="rounded-pill px-3 py-1 small fw-bold">Notices</Nav.Link>
-                                        </Nav.Item>
-                                        <Nav.Item>
-                                            <Nav.Link eventKey="progress" className="rounded-pill px-3 py-1 small fw-bold">Progress</Nav.Link>
-                                        </Nav.Item>
-                                    </Nav>
-                                    
-                                    <Tab.Content className="flex-grow-1 position-relative" style={{ minHeight: '300px' }}>
-                                        {/* NOTICES TAB */}
-                                        <Tab.Pane eventKey="notices" className="h-100 px-4 pb-4">
-                                            {(!recentAnnouncements || recentAnnouncements.length === 0) ? (
-                                                <div className="text-center py-5 text-muted h-100 d-flex flex-column justify-content-center">
-                                                    <ClipboardList size={40} className="mb-3 mx-auto opacity-25" />
-                                                    <p className="small mb-0">You're all caught up!</p>
-                                                </div>
-                                            ) : (
-                                                <div className="d-flex flex-column gap-3">
-                                                    {recentAnnouncements.map((a, idx) => (
-                                                        <div key={a.id || idx} className="p-3 bg-body-tertiary rounded-4 border">
-                                                            <div className="d-flex justify-content-between mb-2">
-                                                                <small className="fw-bold text-body text-truncate pe-2">"{a.title}"</small>
-                                                                <small className="text-muted flex-shrink-0" style={{ fontSize: '0.7rem' }}>
-                                                                    {new Date(a.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                                                                </small>
-                                                            </div>
-                                                            <p className="text-muted mb-2 lh-sm" style={{ fontSize: '0.8rem', whiteSpace: 'pre-wrap' }}>
-                                                                {a.content?.length > 100 ? a.content.substring(0, 100) + '...' : a.content}
-                                                            </p>
-                                                            <div className="d-flex align-items-center text-muted" style={{ fontSize: '0.75rem' }}>
-                                                                <div className="bg-secondary bg-opacity-25 rounded-circle me-1" style={{ width: '16px', height: '16px' }}></div>
-                                                                {a.authorName}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </Tab.Pane>
+                    {/* ══════ RIGHT SIDEBAR ══════ */}
+                    <Col lg={4} xl={3}>
 
-                                        {/* PROGRESS TAB */}
-                                        <Tab.Pane eventKey="progress" className="h-100 px-4 pb-4">
-                                            {enrollments?.length > 0 ? (
-                                                <div className="d-flex flex-column gap-3">
-                                                    {enrollments.map(e => (
-                                                        <div key={e.id} className="p-3 bg-body-tertiary rounded-4 border">
-                                                            <div className="d-flex justify-content-between align-items-center mb-2">
-                                                                <span className="fw-bold text-body text-truncate pe-2" style={{ fontSize: '0.85rem' }}>{e.courseTitle}</span>
-                                                                <span className="fw-bold text-primary small">{e.progress}%</span>
-                                                            </div>
-                                                            <ProgressBar variant={e.progress >= 100 ? 'success' : 'primary'} now={e.progress} style={{ height: '6px' }} />
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <div className="text-center py-5 text-muted h-100 d-flex flex-column justify-content-center">
-                                                    <Target size={40} className="mb-3 mx-auto opacity-25" />
-                                                    <p className="small mb-0">No courses enrolled yet.</p>
-                                                </div>
-                                            )}
-                                        </Tab.Pane>
-                                    </Tab.Content>
-                                </Tab.Container>
-                            </Card.Body>
-                        </Card>
+                        {/* ── Quick Search ── */}
+                        <form onSubmit={handleDashboardSearch} className="sd-search-bar mb-4">
+                            <i className="bi bi-search" style={{ opacity: 0.35, flexShrink: 0, fontSize: '15px' }}></i>
+                            <input
+                                type="text"
+                                placeholder="Search courses..."
+                                value={dashboardSearch}
+                                onChange={(e) => setDashboardSearch(e.target.value)}
+                            />
+                            <button type="submit" className="sd-search-btn">Find</button>
+                        </form>
+
+                        {/* ── Module Completion ── */}
+                        <div className="sd-sidebar-section">
+                            <div className="sd-sidebar-title">Module Completion</div>
+                            {enrollments?.length > 0 ? (
+                                enrollments.slice(0, 5).map(e => (
+                                    <div key={e.id} className="sd-progress-item">
+                                        <div className="sd-progress-label">
+                                            <span className="sd-course-code">{e.courseTitle}</span>
+                                            <span className="sd-progress-text">{e.progress}% Progress</span>
+                                        </div>
+                                        <div className="sd-progress-bar-track">
+                                            <div className="sd-progress-bar-fill" style={{ width: `${Math.min(e.progress, 100)}%` }}></div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div style={{ textAlign: 'center', padding: '1.5rem 0', opacity: 0.35 }}>
+                                    <i className="bi bi-bullseye" style={{ marginBottom: '0.5rem', fontSize: '32px' }}></i>
+                                    <p style={{ fontSize: '0.78rem', margin: 0 }}>No courses enrolled yet.</p>
+                                </div>
+                            )}
+                        </div>
+
+
                     </Col>
                 </Row>
-
-                {/* ─── AI Recommended Courses ─── */}
-                {recommendedCourses?.length > 0 && (
-                    <>
-                        <h5 className="fw-bold mb-4 d-flex align-items-center">
-                            <Sparkles className="me-2 text-warning" size={22} />
-                            Recommended for You
-                            <Badge bg="dark" className="ms-2 px-2 py-1 rounded-pill fw-medium" style={{ fontSize: '0.7rem' }}>AI</Badge>
-                        </h5>
-                        <Row className="g-4 mb-4">
-                            {recommendedCourses.slice(0, 4).map(course => (
-                                <Col key={`rec-${course.id}`} xs={12} md={6} lg={3}>
-                                    <Card className="h-100 border-0 shadow-sm" style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
-                                        onClick={() => navigate(`/courses/${course.id}`)}
-                                        onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
-                                        onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-                                    >
-                                        <Card.Body className="p-3 d-flex flex-column">
-                                            <Badge bg="success" className="bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 align-self-start mb-2" style={{ fontSize: '0.7rem' }}>Top Match</Badge>
-                                            <h6 className="fw-bold text-body mb-2">{course.title}</h6>
-                                            <p className="text-muted mb-0 flex-grow-1" style={{ fontSize: '0.75rem' }}>
-                                                {course.description ? (course.description.length > 60 ? course.description.substring(0, 60) + '...' : course.description) : ''}
-                                            </p>
-                                            <div className="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
-                                                <span className="fw-bold text-success small">{course.price > 0 ? `Rs. ${Number(course.price).toFixed(2)}` : 'Free'}</span>
-                                                <ArrowRight size={14} className="text-primary" />
-                                            </div>
-                                        </Card.Body>
-                                    </Card>
-                                </Col>
-                            ))}
-                        </Row>
-                    </>
-                )}
             </div>
         );
     }
 
-    // ═════════════════════════
-    // ═══ TEACHER VIEW ═══
-    // ═════════════════════════
-    const myCourses = courses?.filter(c => c.instructorId === user?.id) || [];
+    // ═════════════════════════════════════
+    // ═══ TEACHER VIEW — Refined Clean ═══
+    // ═════════════════════════════════════
+    const myCourses = teacherCourses || [];
 
     return (
-        <div className="container-fluid py-4 min-vh-100 bg-body-tertiary font-sans">
-            <Row className="mb-4 align-items-center">
-                <Col>
-                    <h4 className="fw-bold text-body mb-1 d-flex align-items-center">
-                        Instructor Studio <Badge bg="dark" className="ms-2 px-2 py-1 rounded-pill fw-medium" style={{ fontSize: '0.7rem' }}>Creator Mode</Badge>
-                    </h4>
-                    <p className="text-muted mb-0 small">Manage your course portfolio and track student engagement.</p>
-                </Col>
-                <Col xs="auto">
-                    <Button variant="primary" className="rounded-pill px-4 fw-bold shadow-sm d-flex align-items-center" onClick={() => navigate('/create-course')}>
-                        <BookOpen size={16} className="me-2" /> Publish New Course
-                    </Button>
-                </Col>
-            </Row>
+        <div className="td-wrapper">
 
-            <Row className="g-4 mb-5">
-                <Col md={4}>
-                    <Card className="border-0 shadow-sm h-100">
-                        <Card.Body className="p-4">
-                            <div className="d-flex justify-content-between align-items-center mb-3">
-                                <small className="text-uppercase fw-bold text-muted" style={{ fontSize: '0.65rem', letterSpacing: '0.05em' }}>Total Audience</small>
-                                <div className="bg-success bg-opacity-10 p-2 rounded-circle"><Users className="text-success" size={18} /></div>
-                            </div>
-                            <h2 className="fw-bold text-body mb-0">{teacherStats?.overview?.totalStudents || 0}</h2>
-                            <small className="text-success fw-bold"><CheckCircle size={12} className="me-1" />{teacherStats?.overview?.recentEnrollments || 0} new this week</small>
-                        </Card.Body>
-                    </Card>
-                </Col>
-                <Col md={4}>
-                    <Card className="border-0 shadow-sm h-100">
-                        <Card.Body className="p-4">
-                            <div className="d-flex justify-content-between align-items-center mb-3">
-                                <small className="text-uppercase fw-bold text-muted" style={{ fontSize: '0.65rem', letterSpacing: '0.05em' }}>Published Courses</small>
-                                <div className="bg-primary bg-opacity-10 p-2 rounded-circle"><BookOpen className="text-primary" size={18} /></div>
-                            </div>
-                            <h2 className="fw-bold text-body mb-0">{myCourses.length}</h2>
-                            <small className="text-muted fw-medium">Active in catalog</small>
-                        </Card.Body>
-                    </Card>
-                </Col>
-                <Col md={4}>
-                    <Card className="border-0 shadow-sm h-100">
-                        <Card.Body className="p-4">
-                            <div className="d-flex justify-content-between align-items-center mb-3">
-                                <small className="text-uppercase fw-bold text-muted" style={{ fontSize: '0.65rem', letterSpacing: '0.05em' }}>Total Revenue</small>
-                                <div className="bg-warning bg-opacity-10 p-2 rounded-circle"><Trophy className="text-warning" size={18} /></div>
-                            </div>
-                            <h2 className="fw-bold text-body mb-0">${teacherStats?.overview?.totalRevenue ? Number(teacherStats.overview.totalRevenue).toFixed(0) : '0'}</h2>
-                            <small className="text-muted fw-medium">From all enrollments</small>
-                        </Card.Body>
-                    </Card>
-                </Col>
-            </Row>
+            {/* ── Header ── */}
+            <div className="td-header">
+                <div>
+                    <h2>
+                        Instructor Studio
+                        <span style={{ display: 'inline', marginLeft: '0.5rem', fontSize: '0.55rem', background: '#1a1d23', color: '#fff', padding: '3px 10px', borderRadius: '20px', fontWeight: 600, verticalAlign: 'middle' }}>Creator Mode</span>
+                    </h2>
+                    <p style={{ fontSize: '0.82rem', opacity: 0.7, marginTop: '0.3rem', margin: 0 }}>Manage your course portfolio and track student engagement.</p>
+                </div>
+                <div className="td-header-actions">
+                    <form onSubmit={handleDashboardSearch} className="sd-search-bar">
+                        <i className="bi bi-search" style={{ opacity: 0.35, flexShrink: 0, fontSize: '15px' }}></i>
+                        <input
+                            type="text"
+                            placeholder="Search subjects..."
+                            value={dashboardSearch}
+                            onChange={(e) => setDashboardSearch(e.target.value)}
+                        />
+                        <button type="submit" className="sd-search-btn">Find</button>
+                    </form>
+                </div>
+            </div>
 
-            <h5 className="fw-bold mb-4 border-bottom pb-2">Your Course Portfolio</h5>
+            {/* ── Stat Pills ── */}
+            <div className="td-stat-row">
+                <div className="td-stat-pill">
+                    <div className="td-stat-icon" style={{ background: 'rgba(52,130,82,0.1)' }}>
+                        <i className="bi bi-people" style={{ color: '#348252', fontSize: '18px' }}></i>
+                    </div>
+                    <div>
+                        <div className="td-stat-label">Total Audience</div>
+                        <div className="td-stat-value">{teacherStats?.overview?.totalStudents || 0}</div>
+                        <div className="td-stat-sub">
+                            <i className="bi bi-check-circle" style={{ marginRight: '3px', fontSize: '10px' }}></i>
+                            {teacherStats?.overview?.recentEnrollments || 0} new this week
+                        </div>
+                    </div>
+                </div>
+                <div className="td-stat-pill">
+                    <div className="td-stat-icon" style={{ background: 'rgba(59,130,246,0.1)' }}>
+                        <i className="bi bi-book" style={{ color: '#3b82f6', fontSize: '18px' }}></i>
+                    </div>
+                    <div>
+                        <div className="td-stat-label">Assigned Courses</div>
+                        <div className="td-stat-value">{myCourses.length}</div>
+                        <div className="td-stat-sub" style={{ color: '#3b82f6' }}>Active in catalog</div>
+                    </div>
+                </div>
+                <div className="td-stat-pill">
+                    <div className="td-stat-icon" style={{ background: 'rgba(245,158,11,0.1)' }}>
+                        <i className="bi bi-trophy" style={{ color: '#f59e0b', fontSize: '18px' }}></i>
+                    </div>
+                    <div>
+                        <div className="td-stat-label">Avg. Progress</div>
+                        <div className="td-stat-value">{teacherStats?.overview?.averageProgress ? Math.round(teacherStats.overview.averageProgress) + '%' : '0%'}</div>
+                        <div className="td-stat-sub" style={{ color: '#f59e0b' }}>Across all batches</div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Course Portfolio ── */}
+            <div className="td-section-title">Your Course Portfolio</div>
+
             {myCourses.length > 0 ? (
-                <Row className="g-4">
-                    {myCourses.map(course => (
-                        <Col key={course.id} xs={12} md={6} lg={4}>
-                            <Card className="h-100 border-0 shadow-sm" style={{ transition: 'transform 0.2s', cursor: 'pointer' }}
-                                onClick={() => navigate(`/courses/${course.id}`)}
-                                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
-                                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-                            >
-                                <Card.Body className="p-4 d-flex flex-column">
-                                    <Badge bg="primary" className="align-self-start mb-2 px-2 py-1" style={{ fontSize: '0.7rem' }}>Active</Badge>
-                                    <h5 className="fw-bold text-body mb-2">{course.title}</h5>
-                                    <p className="text-muted small flex-grow-1">
-                                        {course.description ? (course.description.length > 80 ? course.description.substring(0, 80) + '...' : course.description) : 'No description.'}
-                                    </p>
-                                    <div className="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
-                                        <span className="fw-bold text-success">{course.price > 0 ? `Rs. ${Number(course.price).toFixed(2)}` : 'Free'}</span>
-                                        <Button variant="outline-primary" size="sm" className="rounded-pill px-3 fw-bold" onClick={e => { e.stopPropagation(); navigate(`/courses/${course.id}`); }}>
-                                            Manage <Eye size={12} className="ms-1" />
-                                        </Button>
+                Object.entries(
+                    myCourses.reduce((acc, course) => {
+                        const cat = course.category || 'General';
+                        if (!acc[cat]) acc[cat] = [];
+                        acc[cat].push(course);
+                        return acc;
+                    }, {})
+                ).map(([category, courses]) => (
+                    <div key={category} style={{ marginBottom: '2rem' }}>
+                        <div className="td-category-label">{category}<span className="ms-2 fw-normal" style={{ fontSize: '0.85rem', opacity: 0.7 }}>({courses.length})</span></div>
+                        <Row className="g-3">
+                            {courses.map(course => (
+                                <Col key={course.id} xs={12} md={6} lg={4}>
+                                    <div className="td-course-card" onClick={() => navigate(`/courses/${course.id}`)}>
+                                        <div className="td-card-status">Active</div>
+                                        <p className="td-card-title">{course.title}</p>
+                                        <p className="td-card-desc">
+                                            {course.description ? (course.description.length > 80 ? course.description.substring(0, 80) + '...' : course.description) : 'No description.'}
+                                        </p>
+                                        <div className="td-card-footer">
+                                            <span className="td-card-price" style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280' }}>Module</span>
+                                            <button className="td-manage-btn" onClick={e => { e.stopPropagation(); navigate(`/courses/${course.id}`); }}>
+                                                <i className="bi bi-eye" style={{ fontSize: '12px' }}></i> Manage
+                                            </button>
+                                        </div>
                                     </div>
-                                </Card.Body>
-                            </Card>
-                        </Col>
-                    ))}
-                </Row>
+                                </Col>
+                            ))}
+                        </Row>
+                    </div>
+                ))
             ) : (
-                <Card className="border-0 shadow-sm text-center p-5 bg-body">
-                    <BookOpen size={48} className="text-muted mx-auto mb-3 opacity-50" />
-                    <h5 className="fw-bold text-body">No Courses Published</h5>
-                    <p className="text-muted mb-0">Share your knowledge with the world by creating your first course today!</p>
-                </Card>
+                <div className="td-empty">
+                    <i className="bi bi-book" style={{ opacity: 0.3, fontSize: '42px' }}></i>
+                    <h5>No Modules Assigned</h5>
+                    <p>You have not been assigned to any modules yet. Please contact the administration.</p>
+                </div>
             )}
         </div>
     );
